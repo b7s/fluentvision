@@ -123,9 +123,16 @@ The user selects the provider via config or fluent API, then the same chainable 
 - [x] 9.11 Run tests and catraca and fix any failures
 
 ## Phase 10: Quality Gates + Git
-- [ ] 10.1 Run pest tests
-- [ ] 10.2 Run phpstan level max
-- [ ] 10.3 Run catraca
-- [ ] 10.4 Fix any failures
-- [ ] 10.5 Create README.md with basic usage and a "docs/" folder with a complete guide
-- [ ] 10.6 Git init + push to main
+- [x] 10.1 Run pest tests — 71 passing
+- [x] 10.2 Run phpstan level max — 0 errors
+- [x] 10.3 Run catraca — 8/8 gates pass (duplication 0.00%)
+- [x] 10.4 Fix any failures — all green
+- [x] 10.5 Create README.md with basic usage and a "docs/" folder with a complete guide
+  - [x] README.md
+  - [x] docs/installation.md
+  - [x] docs/configuration.md
+  - [x] docs/usage.md
+  - [x] docs/providers.md
+  - [x] docs/results.md
+  - [x] docs/cli.md
+- [x] 10.6 Git push to main
