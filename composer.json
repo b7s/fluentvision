@@ -1,0 +1,51 @@
+{
+    "name": "b7s/fluentvision",
+    "description": "A fluent PHP API for YOLO object detection powered by Ultralytics YOLO26 and NanoDet - detect, segment, classify, and annotate images with an elegant chainable interface",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["yolo", "object-detection", "computer-vision", "ultralytics", "nanodet", "php", "fluent", "image-recognition", "ai"],
+    "authors": [
+        {
+            "name": "b7s",
+            "email": "me@brunots.dev"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "symfony/console": "^7.0|^8.0",
+        "symfony/process": "^7.0|^8.0"
+    },
+    "require-dev": {
+        "b7s/catraca": "^1.0",
+        "laravel/pint": "^1.29",
+        "pestphp/pest": "^4.3",
+        "phpstan/phpstan": "^2.0",
+        "systemsdk/phpcpd": "^8.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "B7s\\FluentVision\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "B7s\\FluentVision\\Tests\\": "tests/"
+        }
+    },
+    "bin": [
+        "bin/fluentvision"
+    ],
+    "scripts": {
+        "test": "./vendor/bin/pest",
+        "test:unit": "./vendor/bin/pest --testsuite=Unit",
+        "test:coverage": "./vendor/bin/pest --coverage",
+        "analyse": "phpstan analyse src --level=2"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable"
+}
