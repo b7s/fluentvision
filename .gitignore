@@ -10,3 +10,7 @@ composer.phar
 composer.lock
 .php-cs-fixer.cache
 .pint.cache
+/examples/output/
+*.pt
+*.ckpt
+/runs/

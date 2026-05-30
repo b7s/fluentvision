@@ -9,7 +9,6 @@ use B7s\FluentVision\Enums\YoloModel;
 use B7s\FluentVision\Exceptions\ModelNotFoundException;
 
 use function file_exists;
-use function is_dir;
 use function sprintf;
 
 readonly class ModelService
@@ -35,18 +34,13 @@ readonly class ModelService
      */
     public function resolveNanodetModel(NanodetModel $model): array
     {
-        $modelDir = sprintf('%s/%s', $this->modelDir, $model->dirname());
-
-        if (! is_dir($modelDir)) {
-            throw ModelNotFoundException::fromName($model->dirname());
-        }
-
-        $configPath = sprintf('%s/%s', $modelDir, $model->configFilename());
-        $checkpointPath = sprintf('%s/%s', $modelDir, $model->checkpointFilename());
+        $configPath = sprintf('%s/%s', $this->nanodetRepoPath, $model->repoConfigPath());
 
         if (! file_exists($configPath)) {
             throw ModelNotFoundException::fromPath($configPath);
         }
+
+        $checkpointPath = sprintf('%s/%s', $this->modelDir, $model->repoCheckpointName());
 
         if (! file_exists($checkpointPath)) {
             throw ModelNotFoundException::fromPath($checkpointPath);
@@ -70,16 +64,15 @@ readonly class ModelService
 
     public function nanodetModelExists(NanodetModel $model): bool
     {
-        $modelDir = sprintf('%s/%s', $this->modelDir, $model->dirname());
+        $configPath = sprintf('%s/%s', $this->nanodetRepoPath, $model->repoConfigPath());
 
-        if (! is_dir($modelDir)) {
+        if (! file_exists($configPath)) {
             return false;
         }
 
-        $configPath = sprintf('%s/%s', $modelDir, $model->configFilename());
-        $checkpointPath = sprintf('%s/%s', $modelDir, $model->checkpointFilename());
+        $checkpointPath = sprintf('%s/%s', $this->modelDir, $model->repoCheckpointName());
 
-        return file_exists($configPath) && file_exists($checkpointPath);
+        return file_exists($checkpointPath);
     }
 
     public function getNanodetRepoPath(): string

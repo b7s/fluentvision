@@ -33,7 +33,7 @@ The user selects the provider via config or fluent API, then the same chainable 
 
 ### Model Storage
 - Ultralytics models: `~/.fluentvision/models/yolo26s.pt` etc.
-- NanoDet models: `~/.fluentvision/models/nanodet-plus-m_416/` (config YAML + checkpoint)
+- NanoDet models: config from cloned repo (`~/.fluentvision/nanodet/config/`), checkpoints in `~/.fluentvision/models/` (flat)
 
 ### Key Design Principles
 - Entities own transitions (state machine pattern from Laravel Statecraft)
@@ -135,4 +135,34 @@ The user selects the provider via config or fluent API, then the same chainable 
   - [x] docs/providers.md
   - [x] docs/results.md
   - [x] docs/cli.md
-- [x] 10.6 Git push to main
+- [ ] 10.6 Git push to main
+
+## Phase 11: Real Examples with Both Providers
+- [x] 11.1 Create examples/ultralytics_detect.php — YOLO26s detection on all 3 example images
+- [x] 11.2 Create examples/nanodet_detect.php — NanoDet-Plus M 416 detection on all 3 example images
+- [x] 11.3 Create examples/compare_providers.php — side-by-side Ultralytics vs NanoDet comparison
+- [x] 11.4 Create examples/annotate_example.php — Ultralytics annotation output
+- [x] 11.5 Add examples/output/ to .gitignore (annotated images)
+- [x] 11.6 Run `php examples/ultralytics_detect.php` and verify expected items are detected
+- factory-workers...jpg → person (91%, 89%)
+- modern-workspace...jpg → cup, potted plant (6), laptop, book, dining table
+- woman-cup-coffe.jpg → person, cup
+- [x] 11.7 Run `php examples/nanodet_detect.php` and verify expected items are detected
+- factory-workers...jpg → person (82%, 64%)
+- modern-workspace...jpg → cup, potted_plant (7), laptop, dining_table, vase
+- woman-cup-coffe.jpg → person (82%)
+- [x] 11.8 Run `php examples/compare_providers.php` and review both providers output
+- [x] 11.9 Run pest tests + phpstan + catraca — all green
+
+## Phase 11 Bug Fixes (during example testing)
+- [x] Fixed NanodetModel::checkpointUrl() — release tag changed from v1.0.0 to v1.0.0-alpha-1
+- [x] Fixed nanodet_inference.py parse_detections() — enumerate(dets) changed to dets.items() (dict keyed by class_id)
+- [x] Fixed nanodet_inference.py stdout pollution — redirected non-JSON output to stderr (sys.stdout = sys.stderr)
+- [x] Fixed ultralytics_inference.py stdout pollution — same redirect pattern for Ultralytics YOLO output
+- [x] Updated NanodetModel tests — configFilename/checkpointFilename match actual repo file names
+- [x] Removed configUrl() test (method removed from enum), replaced with checkpointUrl() test
+- [x] Cleaned up stale files: project-root yolo26s.pt, ~/.fluentvision/models/nanodet-plus-m-416/
+- [x] Added *.pt, *.ckpt, /runs/ to .gitignore
+- [x] Added "package vs direct" usage docblocks to all 4 example files
+- [x] Re-downloaded NanoDet checkpoint with correct filename (35MB, v1.0.0-alpha-1 release)
+- [x] Pint style fixes applied to EnumTest, InstallCommand, ModelService

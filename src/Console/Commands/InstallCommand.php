@@ -90,7 +90,6 @@ class InstallCommand extends Command
 
         $dirs = [
             $config->modelDir(),
-            $config->modelDir().'/nanodet',
         ];
 
         foreach ($dirs as $dir) {
@@ -172,7 +171,7 @@ class InstallCommand extends Command
             venvPath: $config->pythonVenvPath(),
         );
 
-        $this->installPackages($io, $pythonService, ['opencv-python-headless', 'pyyaml', 'torch', 'torchvision']);
+        $this->installPackages($io, $pythonService, ['opencv-python-headless', 'pyyaml', 'torch', 'torchvision', 'pytorch_lightning', 'termcolor', 'pycocotools']);
     }
 
     /**
@@ -230,22 +229,7 @@ class InstallCommand extends Command
 
     private function downloadNanodetModel(SymfonyStyle $io, string $modelDir, NanodetModel $model): void
     {
-        $modelSubDir = sprintf('%s/%s', $modelDir, $model->dirname());
-
-        if (! is_dir($modelSubDir)) {
-            if (! mkdir($modelSubDir, 0755, true) && ! is_dir($modelSubDir)) {
-                throw new RuntimeException(sprintf('Directory "%s" was not created', $modelSubDir));
-            }
-        }
-
-        $configPath = sprintf('%s/%s', $modelSubDir, $model->configFilename());
-        $checkpointPath = sprintf('%s/%s', $modelSubDir, $model->checkpointFilename());
-
-        if (! file_exists($configPath)) {
-            $this->downloadWithCurl($io, $model->configUrl(), $configPath, 120, 'Config');
-        } else {
-            $io->text(sprintf(' <info>✓</info> Config already exists: %s', $configPath));
-        }
+        $checkpointPath = sprintf('%s/%s', $modelDir, $model->repoCheckpointName());
 
         if (! file_exists($checkpointPath)) {
             $this->downloadWithCurl($io, $model->checkpointUrl(), $checkpointPath, 600, 'Checkpoint');

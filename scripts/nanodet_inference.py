@@ -29,37 +29,77 @@ def setup_nanodet(nanodet_path):
         sys.path.insert(0, nanodet_path)
 
 
+def parse_detections(dets, class_names, score_thres):
+    detections = []
+    if dets is None:
+        return detections
+    for class_id, class_dets in dets.items():
+        if not isinstance(class_dets, list):
+            continue
+        for det in class_dets:
+            score = det[-1]
+            if score < score_thres:
+                continue
+            x1, y1, x2, y2 = det[:4]
+            class_name = class_names[class_id] if class_id < len(class_names) else str(class_id)
+            detections.append({
+                "class": class_name,
+                "confidence": float(score),
+                "box": {
+                    "x1": float(x1),
+                    "y1": float(y1),
+                    "x2": float(x2),
+                    "y2": float(y2),
+                },
+            })
+    return detections
+
+
 def run_image_inference(args):
-    from nanodet.demo.demo import Predictor
     import cv2
     import torch
-    import yaml
+    from nanodet.model.arch import build_model
+    from nanodet.util import Logger, cfg, load_config, load_model_weight
+    from nanodet.data.batch_process import stack_batch_img
+    from nanodet.data.collate import naive_collate
+    from nanodet.data.transform import Pipeline
 
-    with open(args.config, "r") as f:
-        cfg = yaml.safe_load(f)
+    load_config(cfg, args.config)
+    logger = Logger(-1, use_tensorboard=False)
 
-    predictor = Predictor(cfg, args.checkpoint, args.device, args.conf)
+    model = build_model(cfg.model)
+    ckpt = torch.load(args.checkpoint, map_location=lambda storage, loc: storage)
+    load_model_weight(model, ckpt, logger)
+
+    if cfg.model.arch.backbone.name == "RepVGG":
+        deploy_config = cfg.model
+        deploy_config.arch.backbone.update({"deploy": True})
+        deploy_model = build_model(deploy_config)
+        from nanodet.model.backbone.repvgg import repvgg_det_model_convert
+        model = repvgg_det_model_convert(model, deploy_model)
+
+    model = model.to(args.device).eval()
+    pipeline = Pipeline(cfg.data.val.pipeline, cfg.data.val.keep_ratio)
 
     start = time.time()
     img = cv2.imread(args.image)
     if img is None:
         return {"error": f"Cannot read image: {args.image}"}
 
-    result = predictor.run(img)
+    height, width = img.shape[:2]
+    img_info = {"id": 0, "file_name": None, "height": height, "width": width}
+    meta = dict(img_info=img_info, raw_img=img, img=img)
+    meta = pipeline(None, meta, cfg.data.val.input_size)
+    meta["img"] = torch.from_numpy(meta["img"].transpose(2, 0, 1)).to(args.device)
+    meta = naive_collate([meta])
+    meta["img"] = stack_batch_img(meta["img"], divisible=32)
+
+    with torch.no_grad():
+        results = model.inference(meta)
+
     inference_time = time.time() - start
 
-    detections = []
-    for det in result:
-        detections.append({
-            "class": det.get("class_name", str(det.get("class_id", ""))),
-            "confidence": float(det.get("score", 0)),
-            "box": {
-                "x1": float(det.get("bbox", [0, 0, 0, 0])[0]),
-                "y1": float(det.get("bbox", [0, 0, 0, 0])[1]),
-                "x2": float(det.get("bbox", [0, 0, 0, 0])[2]),
-                "y2": float(det.get("bbox", [0, 0, 0, 0])[3]),
-            },
-        })
+    detections = parse_detections(results[0], cfg.class_names, args.conf)
 
     output = {
         "image_path": str(args.image),
@@ -72,14 +112,19 @@ def run_image_inference(args):
 
     if args.save:
         annotated = img.copy()
-        for det in result:
-            bbox = det.get("bbox", [0, 0, 0, 0])
-            score = det.get("score", 0)
-            class_name = det.get("class_name", "")
-            x1, y1, x2, y2 = [int(v) for v in bbox]
+        for det in detections:
+            box = det["box"]
+            x1, y1, x2, y2 = [int(v) for v in [box["x1"], box["y1"], box["x2"], box["y2"]]]
             cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(annotated, f"{class_name} {score:.2f}", (x1, y1 - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            cv2.putText(
+                annotated,
+                f"{det['class']} {det['confidence']:.2f}",
+                (x1, y1 - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (0, 255, 0),
+                2,
+            )
 
         annotated_path = str(Path(args.image).with_stem(Path(args.image).stem + "_annotated"))
         cv2.imwrite(annotated_path, annotated)
@@ -90,19 +135,34 @@ def run_image_inference(args):
 
 def run_video_inference(args):
     import cv2
+    import torch
+    from nanodet.model.arch import build_model
+    from nanodet.util import Logger, cfg, load_config, load_model_weight
+    from nanodet.data.batch_process import stack_batch_img
+    from nanodet.data.collate import naive_collate
+    from nanodet.data.transform import Pipeline
+
+    load_config(cfg, args.config)
+    logger = Logger(-1, use_tensorboard=False)
+
+    model = build_model(cfg.model)
+    ckpt = torch.load(args.checkpoint, map_location=lambda storage, loc: storage)
+    load_model_weight(model, ckpt, logger)
+
+    if cfg.model.arch.backbone.name == "RepVGG":
+        deploy_config = cfg.model
+        deploy_config.arch.backbone.update({"deploy": True})
+        deploy_model = build_model(deploy_config)
+        from nanodet.model.backbone.repvgg import repvgg_det_model_convert
+        model = repvgg_det_model_convert(model, deploy_model)
+
+    model = model.to(args.device).eval()
+    pipeline = Pipeline(cfg.data.val.pipeline, cfg.data.val.keep_ratio)
 
     start = time.time()
     cap = cv2.VideoCapture(args.video)
     if not cap.isOpened():
         return {"error": f"Cannot open video: {args.video}"}
-
-    from nanodet.demo.demo import Predictor
-    import yaml
-
-    with open(args.config, "r") as f:
-        cfg = yaml.safe_load(f)
-
-    predictor = Predictor(cfg, args.checkpoint, args.device, args.conf)
 
     frames = []
     frame_idx = 0
@@ -116,26 +176,23 @@ def run_video_inference(args):
             frame_idx += 1
             continue
 
-        result = predictor.run(frame)
-        detections = []
-        for det in result:
-            detections.append({
-                "class": det.get("class_name", str(det.get("class_id", ""))),
-                "confidence": float(det.get("score", 0)),
-                "box": {
-                    "x1": float(det.get("bbox", [0, 0, 0, 0])[0]),
-                    "y1": float(det.get("bbox", [0, 0, 0, 0])[1]),
-                    "x2": float(det.get("bbox", [0, 0, 0, 0])[2]),
-                    "y2": float(det.get("bbox", [0, 0, 0, 0])[3]),
-                },
-            })
+        height, width = frame.shape[:2]
+        img_info = {"id": 0, "file_name": f"frame_{frame_idx}", "height": height, "width": width}
+        meta = dict(img_info=img_info, raw_img=frame, img=frame)
+        meta = pipeline(None, meta, cfg.data.val.input_size)
+        meta["img"] = torch.from_numpy(meta["img"].transpose(2, 0, 1)).to(args.device)
+        meta = naive_collate([meta])
+        meta["img"] = stack_batch_img(meta["img"], divisible=32)
 
+        with torch.no_grad():
+            results = model.inference(meta)
+
+        detections = parse_detections(results[0], cfg.class_names, args.conf)
         frames.append({
             "image_path": f"frame_{frame_idx}",
             "detections": detections,
             "inference_time": 0,
         })
-
         frame_idx += 1
 
     cap.release()
@@ -153,6 +210,9 @@ def run_video_inference(args):
 def main():
     args = parse_args()
 
+    real_stdout = sys.stdout
+    sys.stdout = sys.stderr
+
     setup_nanodet(args.nanodet_path)
 
     try:
@@ -165,11 +225,11 @@ def main():
     except Exception as e:
         output = {"error": str(e)}
 
-    if "error" in output:
-        print(json.dumps(output))
-        sys.exit(1)
-
+    sys.stdout = real_stdout
     print(json.dumps(output))
+
+    if "error" in output:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

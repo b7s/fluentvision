@@ -69,12 +69,12 @@ describe('NanodetModel enum', function () {
     });
 
     it('returns config and checkpoint filenames', function () {
-        expect(NanodetModel::PlusM416->configFilename())->toBe('nanodet-plus-m-416.yml');
-        expect(NanodetModel::PlusM416->checkpointFilename())->toBe('nanodet-plus-m-416.ckpt');
+        expect(NanodetModel::PlusM416->configFilename())->toBe('config/nanodet-plus-m_416.yml');
+        expect(NanodetModel::PlusM416->checkpointFilename())->toBe('nanodet-plus-m_416_checkpoint.ckpt');
     });
 
-    it('returns config URL', function () {
-        expect(NanodetModel::PlusM416->configUrl())->toContain('raw.githubusercontent.com');
+    it('returns checkpoint URL', function () {
+        expect(NanodetModel::PlusM416->checkpointUrl())->toContain('v1.0.0-alpha-1');
     });
 });
 

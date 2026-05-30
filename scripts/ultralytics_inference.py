@@ -135,9 +135,13 @@ def run_video_inference(model, args):
 def main():
     args = parse_args()
 
+    real_stdout = sys.stdout
+    sys.stdout = sys.stderr
+
     try:
         from ultralytics import YOLO
     except ImportError:
+        sys.stdout = real_stdout
         print(json.dumps({"error": "ultralytics package not installed. Run: pip install ultralytics"}))
         sys.exit(1)
 
@@ -148,9 +152,11 @@ def main():
     elif args.video:
         output = run_video_inference(model, args)
     else:
+        sys.stdout = real_stdout
         print(json.dumps({"error": "Either --image or --video is required"}))
         sys.exit(1)
 
+    sys.stdout = real_stdout
     print(json.dumps(output))
 
 

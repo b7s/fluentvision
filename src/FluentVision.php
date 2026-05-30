@@ -19,6 +19,8 @@ use B7s\FluentVision\Services\PythonService;
 use RuntimeException;
 use Throwable;
 
+use function file_exists;
+
 class FluentVision
 {
     private Config $config;
@@ -305,15 +307,31 @@ class FluentVision
 
     private function resolveModel(): string
     {
-        if ($this->model !== '') {
-            return $this->model;
+        $modelValue = $this->model;
+
+        if ($modelValue === '') {
+            $modelValue = $this->provider->isUltralytics()
+                ? $this->config->string('ultralytics_default_model', 'yolo26s.pt')
+                : $this->config->string('nanodet_default_model', 'nanodet-plus-m-416');
         }
 
         if ($this->provider->isUltralytics()) {
-            return $this->config->string('ultralytics_default_model', 'yolo26s.pt');
+            $yoloModel = YoloModel::tryFrom($modelValue);
+
+            if ($yoloModel !== null) {
+                return $this->modelService->resolveUltralyticsModel($yoloModel);
+            }
+
+            $fullPath = $this->config->modelDir().'/'.$modelValue;
+
+            if (file_exists($fullPath)) {
+                return $fullPath;
+            }
+
+            return $modelValue;
         }
 
-        return $this->config->string('nanodet_default_model', 'nanodet-plus-m-416');
+        return $modelValue;
     }
 
     /**
