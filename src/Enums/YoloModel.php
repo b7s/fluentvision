@@ -14,6 +14,13 @@ enum YoloModel: string
     case YOLO26l = 'yolo26l.pt';
     case YOLO26x = 'yolo26x.pt';
 
+    case YOLOE26s = 'yoloe-26s-seg.pt';
+    case YOLOE26m = 'yoloe-26m-seg.pt';
+    case YOLOE26l = 'yoloe-26l-seg.pt';
+    case YOLOE26sPF = 'yoloe-26s-seg-pf.pt';
+    case YOLOE26mPF = 'yoloe-26m-seg-pf.pt';
+    case YOLOE26lPF = 'yoloe-26l-seg-pf.pt';
+
     public function label(): string
     {
         return match ($this) {
@@ -22,6 +29,12 @@ enum YoloModel: string
             self::YOLO26m => 'YOLO26 Medium',
             self::YOLO26l => 'YOLO26 Large',
             self::YOLO26x => 'YOLO26 Extra Large',
+            self::YOLOE26s => 'YOLOE-26 Small Seg',
+            self::YOLOE26m => 'YOLOE-26 Medium Seg',
+            self::YOLOE26l => 'YOLOE-26 Large Seg',
+            self::YOLOE26sPF => 'YOLOE-26 Small Seg (Prompt-Free)',
+            self::YOLOE26mPF => 'YOLOE-26 Medium Seg (Prompt-Free)',
+            self::YOLOE26lPF => 'YOLOE-26 Large Seg (Prompt-Free)',
         };
     }
 
@@ -33,5 +46,27 @@ enum YoloModel: string
     public function downloadUrl(): string
     {
         return 'https://github.com/ultralytics/assets/releases/download/v8.4.0/'.$this->value;
+    }
+
+    public function isYoloe(): bool
+    {
+        return $this === self::YOLOE26s
+            || $this === self::YOLOE26m
+            || $this === self::YOLOE26l
+            || $this === self::YOLOE26sPF
+            || $this === self::YOLOE26mPF
+            || $this === self::YOLOE26lPF;
+    }
+
+    public function isPromptFree(): bool
+    {
+        return $this === self::YOLOE26sPF
+            || $this === self::YOLOE26mPF
+            || $this === self::YOLOE26lPF;
+    }
+
+    public function supportsPrompts(): bool
+    {
+        return $this->isYoloe() && ! $this->isPromptFree();
     }
 }

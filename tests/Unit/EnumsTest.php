@@ -10,21 +10,21 @@ use B7s\FluentVision\Enums\YoloTask;
 
 describe('Provider enum', function () {
     it('has correct cases', function () {
-        expect(Provider::cases())->toHaveCount(2);
-        expect(Provider::Ultralytics->value)->toBe('ultralytics');
-        expect(Provider::Nanodet->value)->toBe('nanodet');
+        expect(Provider::cases())->toHaveCount(2)
+            ->and(Provider::Ultralytics->value)->toBe('ultralytics')
+            ->and(Provider::Nanodet->value)->toBe('nanodet');
     });
 
     it('returns correct labels', function () {
-        expect(Provider::Ultralytics->label())->toBe('Ultralytics YOLO26');
-        expect(Provider::Nanodet->label())->toBe('NanoDet-Plus');
+        expect(Provider::Ultralytics->label())->toBe('Ultralytics YOLO26')
+            ->and(Provider::Nanodet->label())->toBe('NanoDet-Plus');
     });
 
     it('checks provider type', function () {
-        expect(Provider::Ultralytics->isUltralytics())->toBeTrue();
-        expect(Provider::Ultralytics->isNanodet())->toBeFalse();
-        expect(Provider::Nanodet->isNanodet())->toBeTrue();
-        expect(Provider::Nanodet->isUltralytics())->toBeFalse();
+        expect(Provider::Ultralytics->isUltralytics())->toBeTrue()
+            ->and(Provider::Ultralytics->isNanodet())->toBeFalse()
+            ->and(Provider::Nanodet->isNanodet())->toBeTrue()
+            ->and(Provider::Nanodet->isUltralytics())->toBeFalse();
     });
 
     it('returns values array', function () {
@@ -33,29 +33,58 @@ describe('Provider enum', function () {
 
     it('returns options array', function () {
         $options = Provider::options();
-        expect($options)->toHaveKey('ultralytics');
-        expect($options)->toHaveKey('nanodet');
+        expect($options)->toHaveKey('ultralytics')
+            ->and($options)->toHaveKey('nanodet');
     });
 });
 
 describe('YoloModel enum', function () {
     it('has correct cases', function () {
-        expect(YoloModel::cases())->toHaveCount(5);
+        expect(YoloModel::cases())->toHaveCount(11);
     });
 
     it('returns correct filenames', function () {
-        expect(YoloModel::YOLO26s->filename())->toBe('yolo26s.pt');
-        expect(YoloModel::YOLO26n->filename())->toBe('yolo26n.pt');
+        expect(YoloModel::YOLO26s->filename())->toBe('yolo26s.pt')
+            ->and(YoloModel::YOLO26n->filename())->toBe('yolo26n.pt')
+            ->and(YoloModel::YOLOE26s->filename())->toBe('yoloe-26s-seg.pt')
+            ->and(YoloModel::YOLOE26sPF->filename())->toBe('yoloe-26s-seg-pf.pt');
     });
 
     it('returns download URLs', function () {
-        expect(YoloModel::YOLO26s->downloadUrl())->toContain('yolo26s.pt');
-        expect(YoloModel::YOLO26s->downloadUrl())->toContain('v8.4.0');
+        expect(YoloModel::YOLO26s->downloadUrl())->toContain('yolo26s.pt')
+            ->and(YoloModel::YOLO26s->downloadUrl())->toContain('v8.4.0')
+            ->and(YoloModel::YOLOE26s->downloadUrl())->toContain('yoloe-26s-seg.pt');
     });
 
     it('returns values and options', function () {
-        expect(YoloModel::values())->toHaveCount(5);
-        expect(YoloModel::options())->toHaveKey('yolo26s.pt');
+        expect(YoloModel::values())->toHaveCount(11)
+            ->and(YoloModel::options())->toHaveKey('yolo26s.pt');
+    });
+
+    it('identifies YOLOE models', function () {
+        expect(YoloModel::YOLOE26s->isYoloe())->toBeTrue()
+            ->and(YoloModel::YOLOE26m->isYoloe())->toBeTrue()
+            ->and(YoloModel::YOLOE26l->isYoloe())->toBeTrue()
+            ->and(YoloModel::YOLOE26sPF->isYoloe())->toBeTrue()
+            ->and(YoloModel::YOLOE26mPF->isYoloe())->toBeTrue()
+            ->and(YoloModel::YOLOE26lPF->isYoloe())->toBeTrue()
+            ->and(YoloModel::YOLO26s->isYoloe())->toBeFalse();
+    });
+
+    it('identifies prompt-free models', function () {
+        expect(YoloModel::YOLOE26sPF->isPromptFree())->toBeTrue()
+            ->and(YoloModel::YOLOE26mPF->isPromptFree())->toBeTrue()
+            ->and(YoloModel::YOLOE26lPF->isPromptFree())->toBeTrue()
+            ->and(YoloModel::YOLOE26s->isPromptFree())->toBeFalse()
+            ->and(YoloModel::YOLO26s->isPromptFree())->toBeFalse();
+    });
+
+    it('identifies models that support prompts', function () {
+        expect(YoloModel::YOLOE26s->supportsPrompts())->toBeTrue()
+            ->and(YoloModel::YOLOE26m->supportsPrompts())->toBeTrue()
+            ->and(YoloModel::YOLOE26l->supportsPrompts())->toBeTrue()
+            ->and(YoloModel::YOLOE26sPF->supportsPrompts())->toBeFalse()
+            ->and(YoloModel::YOLO26s->supportsPrompts())->toBeFalse();
     });
 });
 
@@ -69,8 +98,8 @@ describe('NanodetModel enum', function () {
     });
 
     it('returns config and checkpoint filenames', function () {
-        expect(NanodetModel::PlusM416->configFilename())->toBe('config/nanodet-plus-m_416.yml');
-        expect(NanodetModel::PlusM416->checkpointFilename())->toBe('nanodet-plus-m_416_checkpoint.ckpt');
+        expect(NanodetModel::PlusM416->configFilename())->toBe('config/nanodet-plus-m_416.yml')
+            ->and(NanodetModel::PlusM416->checkpointFilename())->toBe('nanodet-plus-m_416_checkpoint.ckpt');
     });
 
     it('returns checkpoint URL', function () {
@@ -84,11 +113,11 @@ describe('YoloTask enum', function () {
     });
 
     it('returns model suffixes', function () {
-        expect(YoloTask::Detect->modelSuffix())->toBe('');
-        expect(YoloTask::Segment->modelSuffix())->toBe('-seg');
-        expect(YoloTask::Classify->modelSuffix())->toBe('-cls');
-        expect(YoloTask::Pose->modelSuffix())->toBe('-pose');
-        expect(YoloTask::Obb->modelSuffix())->toBe('-obb');
+        expect(YoloTask::Detect->modelSuffix())->toBe('')
+            ->and(YoloTask::Segment->modelSuffix())->toBe('-seg')
+            ->and(YoloTask::Classify->modelSuffix())->toBe('-cls')
+            ->and(YoloTask::Pose->modelSuffix())->toBe('-pose')
+            ->and(YoloTask::Obb->modelSuffix())->toBe('-obb');
     });
 });
 
@@ -98,18 +127,18 @@ describe('Device enum', function () {
     });
 
     it('maps to correct Ultralytics args', function () {
-        expect(Device::Cpu->toUltralyticsArg())->toBe('cpu');
-        expect(Device::Gpu->toUltralyticsArg())->toBe('0');
+        expect(Device::Cpu->toUltralyticsArg())->toBe('cpu')
+            ->and(Device::Gpu->toUltralyticsArg())->toBe('0');
     });
 
     it('maps to correct NanoDet args', function () {
-        expect(Device::Cpu->toNanodetArg())->toBe('cpu');
-        expect(Device::Gpu->toNanodetArg())->toBe('cuda:0');
+        expect(Device::Cpu->toNanodetArg())->toBe('cpu')
+            ->and(Device::Gpu->toNanodetArg())->toBe('cuda:0');
     });
 
     it('checks device type', function () {
-        expect(Device::Cpu->isCpu())->toBeTrue();
-        expect(Device::Cpu->isGpu())->toBeFalse();
-        expect(Device::Gpu->isGpu())->toBeTrue();
+        expect(Device::Cpu->isCpu())->toBeTrue()
+            ->and(Device::Cpu->isGpu())->toBeFalse()
+            ->and(Device::Gpu->isGpu())->toBeTrue();
     });
 });

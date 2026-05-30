@@ -51,6 +51,9 @@ Models are downloaded on demand or you can pre-fetch them:
 # Download a YOLO model
 vendor/bin/fluentvision install --model=yolo26s.pt
 
+# Download a YOLOE model
+vendor/bin/fluentvision install --model=yoloe-26s-seg.pt
+
 # Download a NanoDet model (config + checkpoint)
 vendor/bin/fluentvision install --model=nanodet-plus-m-416
 
@@ -63,7 +66,8 @@ Model files are stored in:
 | Provider | Path | Contents |
 |----------|------|----------|
 | Ultralytics | `~/.fluentvision/models/yolo26s.pt` | Single `.pt` weight file |
-| NanoDet | `~/.fluentvision/models/nanodet-plus-m-416/` | Config `.yml` + checkpoint `.ckpt` |
+| YOLOE | `~/.fluentvision/models/yoloe-26s-seg.pt` | Single `.pt` weight file |
+| NanoDet | `~/.fluentvision/models/nanodet-plus-m_416_checkpoint.ckpt` | Config `.yml` (from repo) + checkpoint `.ckpt` |
 
 ## Step 3: Verify Your Setup
 

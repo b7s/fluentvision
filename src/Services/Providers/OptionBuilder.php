@@ -73,6 +73,19 @@ class OptionBuilder
      * @param  array<string, mixed>  $options
      * @param  array<int, string>  $args
      */
+    public static function appendPromptsOption(array $options, array &$args): void
+    {
+        if (isset($options['prompts']) && is_array($options['prompts']) && $options['prompts'] !== []) {
+            $args[] = '--prompts';
+            $prompts = array_filter($options['prompts'], is_string(...));
+            $args[] = implode(',', $prompts);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     * @param  array<int, string>  $args
+     */
     public static function appendCommonOptions(array $options, array &$args): void
     {
         self::appendFloatOption($options, $args, 'conf', '--conf');

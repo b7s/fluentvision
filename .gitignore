@@ -13,4 +13,6 @@ composer.lock
 /examples/output/
 *.pt
 *.ckpt
+/*.ts
+logs.txt
 /runs/

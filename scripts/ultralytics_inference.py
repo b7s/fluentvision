@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ultralytics YOLO26 inference script for FluentVision."""
+"""Ultralytics YOLO26/YOLOE inference script for FluentVision."""
 
 import argparse
 import json
@@ -26,7 +26,12 @@ def parse_args():
     parser.add_argument("--end2end", action="store_true", help="End-to-end inference")
     parser.add_argument("--vid-stride", type=int, default=1, help="Video frame stride")
     parser.add_argument("--save", action="store_true", help="Save annotated image/video")
+    parser.add_argument("--prompts", type=str, default=None, help="Comma-separated text prompts for YOLOE open-vocabulary detection")
     return parser.parse_args()
+
+
+def is_yoloe_model(model):
+    return type(model).__name__ == "YOLOE"
 
 
 def run_image_inference(model, args):
@@ -39,12 +44,15 @@ def run_image_inference(model, args):
         "device": args.device,
         "max_det": args.max_det,
         "augment": args.augment,
-        "agnostic_nms": args.agnostic_nms,
         "half": args.half,
-        "end2end": args.end2end,
         "save": args.save,
         "verbose": False,
     }
+
+    if not is_yoloe_model(model):
+        predict_kwargs["agnostic_nms"] = args.agnostic_nms
+        predict_kwargs["end2end"] = args.end2end
+
     if args.classes is not None:
         predict_kwargs["classes"] = [int(c) for c in args.classes.split(",")]
 
@@ -146,6 +154,14 @@ def main():
         sys.exit(1)
 
     model = YOLO(args.model)
+
+    if args.prompts is not None and hasattr(model, "set_classes"):
+        prompts = [p.strip() for p in args.prompts.split(",") if p.strip()]
+        if prompts:
+            try:
+                model.set_classes(prompts)
+            except AssertionError:
+                pass
 
     if args.image:
         output = run_image_inference(model, args)

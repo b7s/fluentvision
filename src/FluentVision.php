@@ -44,6 +44,9 @@ class FluentVision
     /** @var array<int, string> */
     private array $classes = [];
 
+    /** @var array<int, string> */
+    private array $prompts = [];
+
     private bool $augment = false;
 
     private bool $agnosticNms = false;
@@ -181,6 +184,21 @@ class FluentVision
     public function classes(array $classes): self
     {
         $this->classes = $classes;
+
+        return $this;
+    }
+
+    /**
+     * Set text prompts for YOLOE open-vocabulary detection.
+     *
+     * Only works with YOLOE models (yoloe-26*-seg.pt).
+     * Prompt-free variants (-pf) ignore this option.
+     *
+     * @param  array<int, string>  $prompts
+     */
+    public function prompts(array $prompts): self
+    {
+        $this->prompts = $prompts;
 
         return $this;
     }
@@ -346,6 +364,7 @@ class FluentVision
             'imgsz' => $this->imgsz,
             'max_det' => $this->maxDet,
             'classes' => $this->classes,
+            'prompts' => $this->prompts,
             'augment' => $this->augment,
             'agnostic_nms' => $this->agnosticNms,
             'half' => $this->half,

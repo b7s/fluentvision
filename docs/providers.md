@@ -6,10 +6,11 @@ FluentVision supports two object detection backends. Both return the same PHP re
 
 | Feature | Ultralytics | NanoDet |
 |---------|-------------|---------|
-| Backend | YOLO26 | NanoDet-Plus |
-| Best for | High accuracy, multi-task | Edge devices, real-time |
+| Backend | YOLO26 / YOLOE-26 | NanoDet-Plus |
+| Best for | High accuracy, multi-task, open-vocabulary | Edge devices, real-time |
 | Tasks | detect, segment, classify, pose, obb | detect only |
 | Model sizes | n (2.7M) to x (68M params) | Lightweight only |
+| Open-vocabulary | YOLOE models with text prompts | No |
 | GPU support | CUDA | CUDA |
 | Model format | `.pt` weights | `.yml` config + `.ckpt` weights |
 | Python bridge | `scripts/ultralytics_inference.py` | `scripts/nanodet_inference.py` |
@@ -20,13 +21,19 @@ The default provider. Powered by the Ultralytics YOLO26 family — the latest ge
 
 ### Available Models
 
-| Model | Enum Value | Description |
-|-------|-----------|-------------|
-| YOLO26n | `YoloModel::YOLO26n` | Nano — smallest, fastest |
-| YOLO26s | `YoloModel::YOLO26s` | Small — good balance (default) |
-| YOLO26m | `YoloModel::YOLO26m` | Medium — higher accuracy |
-| YOLO26l | `YoloModel::YOLO26l` | Large — high accuracy |
-| YOLO26x | `YoloModel::YOLO26x` | Extra Large — maximum accuracy |
+| Model | Enum Value | Size | Description |
+|-------|-----------|------|-------------|
+| YOLO26n | `YoloModel::YOLO26n` | 2.7M | Nano — smallest, fastest |
+| YOLO26s | `YoloModel::YOLO26s` | — | Small — good balance (default) |
+| YOLO26m | `YoloModel::YOLO26m` | — | Medium — higher accuracy |
+| YOLO26l | `YoloModel::YOLO26l` | — | Large — high accuracy |
+| YOLO26x | `YoloModel::YOLO26x` | 68M | Extra Large — maximum accuracy |
+| YOLOE-26s | `YoloModel::YOLOE26s` | 29.6 MB | YOLOE Small — open-vocabulary with text prompts |
+| YOLOE-26m | `YoloModel::YOLOE26m` | 67.2 MB | YOLOE Medium — open-vocabulary with text prompts |
+| YOLOE-26l | `YoloModel::YOLOE26l` | 75.7 MB | YOLOE Large — open-vocabulary with text prompts |
+| YOLOE-26s PF | `YoloModel::YOLOE26sPF` | 31.2 MB | YOLOE Small — prompt-free auto-detection |
+| YOLOE-26m PF | `YoloModel::YOLOE26mPF` | 69.5 MB | YOLOE Medium — prompt-free auto-detection |
+| YOLOE-26l PF | `YoloModel::YOLOE26lPF` | 77.9 MB | YOLOE Large — prompt-free auto-detection |
 
 ### Supported Tasks
 
@@ -67,6 +74,84 @@ $result = FluentVision::make()
     ->image('street.jpg')
     ->detect();
 ```
+
+### YOLOE-26 Open-Vocabulary Detection
+
+YOLOE models support **text prompts** — you can detect arbitrary concepts beyond the standard 80 COCO classes. This enables:
+
+- **Attribute detection**: clothing color ("person wearing red"), materials ("wooden table"), patterns ("striped shirt")
+- **Scene attributes**: "nighttime scene", "daytime scene", "indoor", "outdoor"
+- **Domain-specific objects**: "hard hat", "safety vest", "medical equipment"
+- **Fine-grained categories**: "coffee cup" vs "mug", "office desk" vs "dining table"
+
+There are two YOLOE variants:
+
+| Variant | Suffix | `set_classes()` | Best For |
+|---------|--------|----------------|----------|
+| **Text-prompted** | `-seg.pt` | Required | Targeted detection with custom text prompts |
+| **Prompt-free** | `-seg-pf.pt` | Not supported | Auto-detect using learned vocabulary (no prompts needed) |
+
+#### Text-Prompted YOLOE
+
+Use `->prompts()` to specify what to detect:
+
+```php
+use B7s\FluentVision\FluentVision;
+use B7s\FluentVision\Enums\YoloModel;
+
+$result = FluentVision::make()
+    ->useUltralytics()
+    ->model(YoloModel::YOLOE26s)
+    ->useCpu()
+    ->conf(0.25)
+    ->prompts(['person', 'hard hat', 'person wearing yellow', 'nighttime scene'])
+    ->image('factory.jpg')
+    ->detect();
+
+foreach ($result->detections as $d) {
+    echo sprintf("%s: %.1f%%\n", $d->class, $d->confidence * 100);
+}
+// Output:
+// person: 88.5%
+// person: 84.1%
+// hard hat: 36.5%
+// person wearing yellow: 30.3%
+// nighttime scene: 83.0%
+```
+
+#### Prompt-Free YOLOE
+
+Prompt-free models auto-detect using a learned vocabulary without requiring text prompts:
+
+```php
+$result = FluentVision::make()
+    ->useUltralytics()
+    ->model(YoloModel::YOLOE26sPF)
+    ->useCpu()
+    ->conf(0.25)
+    ->image('workspace.jpg')
+    ->detect();
+```
+
+#### CPU vs GPU
+
+All YOLOE models run on **CPU** (~0.15-0.20s per image for YOLOE-26s). Use GPU for faster inference on large batches:
+
+```php
+$result = FluentVision::make()
+    ->useUltralytics()
+    ->model(YoloModel::YOLOE26m)
+    ->useGpu()
+    ->prompts(['person wearing blue', 'safety vest'])
+    ->image('construction-site.jpg')
+    ->detect();
+```
+
+#### YOLOE Limitations
+
+- The `->agnosticNms()` and `->end2end()` options are **not compatible** with YOLOE models (they are silently ignored)
+- Prompt-free models do **not** support `->prompts()` (calling it has no effect)
+- Text-prompted models **require** `->prompts()` — without prompts, they detect the standard 80 COCO classes
 
 ## NanoDet Provider
 

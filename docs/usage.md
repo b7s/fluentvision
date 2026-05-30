@@ -83,17 +83,19 @@ $vision->useGpu();
 | `imgsz(int $imgsz)` | int | 640 | Inference image size in pixels |
 | `maxDet(int $maxDet)` | int | 300 | Maximum detections per image |
 | `classes(array $classes)` | string[] | [] | Filter detections to specific class names |
+| `prompts(array $prompts)` | string[] | [] | Text prompts for YOLOE open-vocabulary detection |
 | `task(YoloTask $task)` | enum | detect | YOLO task type (Ultralytics only) |
 
 ```php
 use B7s\FluentVision\Enums\YoloTask;
 
-$vision->conf(0.5)              // Only detections above 50% confidence
-    ->iou(0.45)                  // Stricter NMS overlap threshold
-    ->imgsz(1280)                // Higher resolution inference
-    ->maxDet(50)                 // Cap at 50 detections
+$vision->conf(0.5) // Only detections above 50% confidence
+    ->iou(0.45) // Stricter NMS overlap threshold
+    ->imgsz(1280) // Higher resolution inference
+    ->maxDet(50) // Cap at 50 detections
     ->classes(['person', 'car']) // Only detect persons and cars
-    ->task(YoloTask::Segment);   // Run segmentation instead of detection
+    ->prompts(['person wearing red', 'nighttime scene']) // YOLOE text prompts
+    ->task(YoloTask::Segment); // Run segmentation instead of detection
 ```
 
 ### Advanced Options (Ultralytics)
@@ -196,6 +198,33 @@ $obbResult = FluentVision::make()
     ->image('aerial.jpg')
     ->detect();
 ```
+
+### YOLOE Open-Vocabulary Detection
+
+YOLOE models detect arbitrary text concepts beyond the 80 COCO classes:
+
+```php
+use B7s\FluentVision\Enums\YoloModel;
+
+// Text-prompted: detect specific concepts
+$result = FluentVision::make()
+    ->useUltralytics()
+    ->model(YoloModel::YOLOE26s)
+    ->prompts(['person wearing red', 'hard hat', 'nighttime scene'])
+    ->conf(0.25)
+    ->image('factory.jpg')
+    ->detect();
+
+// Prompt-free: auto-detect without prompts
+$result = FluentVision::make()
+    ->useUltralytics()
+    ->model(YoloModel::YOLOE26sPF)
+    ->conf(0.25)
+    ->image('workspace.jpg')
+    ->detect();
+```
+
+Both YOLOE variants run on **CPU** (~0.15s per image for YOLOE-26s). See [Providers](providers.md#yoloe-26-open-vocabulary-detection) for full details.
 
 ### Video Processing
 

@@ -47,6 +47,7 @@ vendor/bin/fluentvision install --provider=nanodet
 
 # Download a specific model
 vendor/bin/fluentvision install --model=yolo26s.pt
+vendor/bin/fluentvision install --model=yoloe-26s-seg.pt
 vendor/bin/fluentvision install --model=nanodet-plus-m-416
 ```
 
@@ -58,12 +59,106 @@ vendor/bin/fluentvision doctor
 
 ## Providers
 
-| Provider | Backend | Best For |
-|----------|---------|----------|
-| **Ultralytics** | YOLO26 (n/s/m/l/x) | Full-featured, multi-task, high accuracy |
-| **NanoDet** | NanoDet-Plus (M/T/G) | Ultra-lightweight, edge devices, real-time |
+| Provider | Backend | Best For                                                                |
+|----------|---------|-------------------------------------------------------------------------|
+| **Ultralytics** | YOLO26 (n/s/m/l/x), YOLOE-26 (s/m/l + PF) | Full-featured, multi-task, open-vocabulary detection |
+| **NanoDet** | NanoDet-Plus (M/T/G) | Ultra-lightweight, edge devices, real-time                              |
 
 Both providers return identical PHP result types — switch backends without changing your code.
+
+### YOLOE-26 Open-Vocabulary Detection
+
+YOLOE models support **text prompts** to detect anything you can describe — not just the 80 COCO classes:
+
+```php
+use B7s\FluentVision\Enums\YoloModel;
+
+$result = FluentVision::make()
+    ->useUltralytics()
+    ->model(YoloModel::YOLOE26s)
+    ->useCpu()
+    ->conf(0.25)
+    ->prompts(['person', 'yellow hard hat'])
+    ->image('factory.jpg')
+    ->detect();
+```
+
+| Variant | Suffix | Prompts | Best For |
+|---------|--------|---------|----------|
+| **Text-prompted** | `yoloe-26*-seg.pt` | `->prompts([...])` required | Targeted attribute/concept detection |
+| **Prompt-free** | `yoloe-26*-seg-pf.pt` | Not supported | Auto-detect without specifying prompts |
+
+Runs on **CPU** (~0.15s/image). See [Providers doc](docs/providers.md#yoloe-26-open-vocabulary-detection) for details.
+
+## Detection Examples
+
+### Modern Workspace
+
+```php
+$result = FluentVision::make()
+    ->useUltralytics()
+    ->model(YoloModel::YOLO26s)
+    ->conf(0.4)
+    ->image('modern-workspace-with-laptop-coffee-plants.jpg')
+    ->detect();
+```
+
+![Modern workspace detection](docs/images/modern-workspace-with-laptop-coffee-plants.jpg)
+
+### Person + Cup
+
+```php
+$result = FluentVision::make()
+    ->useUltralytics()
+    ->model(YoloModel::YOLO26s)
+    ->conf(0.4)
+    ->image('woman-cup-coffe.jpg')
+    ->detect();
+```
+
+![Woman cup detection](docs/images/woman-cup-coffe.jpg)
+
+### Street Scene
+
+```php
+$result = FluentVision::make()
+    ->useUltralytics()
+    ->model(YoloModel::YOLO26s)
+    ->conf(0.4)
+    ->image('woman-bike-cars-trees-road-day.jpg')
+    ->detect();
+// 9 detections: person (90.6%), bicycle (91.2%), 7x car
+```
+
+![Street scene annotated](docs/images/woman-bike-cars-trees-road-day-annotated.jpg)
+
+## Detection Result Array
+
+The `detect()` method returns an `InferenceResult` object. Call `toArray()` to get a plain array:
+
+```php
+$result->toArray();
+
+// [
+//     'image_path' => '/path/to/photo.jpg',
+//     'provider' => 'ultralytics',
+//     'model' => 'yolo26s.pt',
+//     'inference_time' => 0.1367,
+//     'detection_count' => 2,
+//     'detections' => [
+//         [
+//             'class' => 'person',
+//             'confidence' => 0.910,
+//             'box' => ['x1' => 198.0, 'y1' => 242.0, 'x2' => 675.0, 'y2' => 836.0],
+//         ],
+//         [
+//             'class' => 'cup',
+//             'confidence' => 0.646,
+//             'box' => ['x1' => 638.0, 'y1' => 459.0, 'x2' => 844.0, 'y2' => 630.0],
+//         ],
+//     ],
+// ]
+```
 
 ## Fluent API
 
@@ -83,8 +178,9 @@ FluentVision::make()
     ->iou(0.45)                         // IoU threshold (NMS)
     ->imgsz(640)                        // inference image size
     ->maxDet(100)                       // max detections per image
-    ->classes(['person', 'car'])        // filter to specific classes
-    ->augment()                         // test-time augmentation
+    ->classes(['person', 'car']) // filter to specific classes
+    ->prompts(['person wearing red', 'hard hat']) // YOLOE text prompts
+    ->augment() // test-time augmentation
     ->half()                            // FP16 inference (GPU)
     ->image('/path/to/image.jpg')
     ->detect();
@@ -233,3 +329,7 @@ vendor/bin/fluentvision install --config=/path/to/config.php
 ## License
 
 MIT
+
+---
+
+[Image by freepik](https://www.magnific.com/)

@@ -1222,7 +1222,20 @@ The application entry point should auto-discover commands from a designated dire
     - Browser testing is incredibly powerful and useful for this project. Browser tests should live in `tests/Browser/`
     - You must not remove any tests or test files from the tests directory without approval
     - Ensure that tests are running in a test environment and on a test database. Never delete the project database
-    - Check documentation when needed: https://pestphp.com/docs/
+    - Multiple expectations can be chained together using "and()":
+      - Instead:
+      ```php
+      expect(...)->toBe(...);
+      expect(...)->toContain(...);
+      expect(...)->toHaveCount(...);
+       ```
+       - Better way:
+        ```php
+          expect(...)->toBe(...)
+          ->and(...)->toContain(...)
+          ->and(...)->toHaveCount(...);
+        ```
+      - Check documentation when needed: https://pestphp.com/docs/
 
 ### Tempest Console
 - Use `#[ConsoleCommand]` attributes

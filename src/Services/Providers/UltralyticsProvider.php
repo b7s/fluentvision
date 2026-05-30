@@ -40,6 +40,7 @@ class UltralyticsProvider implements ProviderContract
         OptionBuilder::appendIntOption($options, $args, 'imgsz', '--imgsz');
         OptionBuilder::appendIntOption($options, $args, 'max_det', '--max-det');
         OptionBuilder::appendClassesOption($options, $args);
+        OptionBuilder::appendPromptsOption($options, $args);
         OptionBuilder::appendBoolOption($options, $args, 'augment', '--augment');
         OptionBuilder::appendBoolOption($options, $args, 'agnostic_nms', '--agnostic-nms');
         OptionBuilder::appendBoolOption($options, $args, 'half', '--half');

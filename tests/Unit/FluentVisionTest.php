@@ -19,8 +19,8 @@ describe('FluentVision', function () {
         $fv = FluentVision::make();
         $result = $fv->provider(Provider::Nanodet);
 
-        expect($result)->toBeInstanceOf(FluentVision::class);
-        expect($fv->getProvider())->toBe(Provider::Nanodet);
+        expect($result)->toBeInstanceOf(FluentVision::class)
+            ->and($fv->getProvider())->toBe(Provider::Nanodet);
     });
 
     it('sets provider via shorthand', function () {
@@ -73,9 +73,23 @@ describe('FluentVision', function () {
             ->imgsz(1280)
             ->maxDet(100);
 
-        expect($fv->getProvider())->toBe(Provider::Ultralytics);
-        expect($fv->getModel())->toBe('yolo26s.pt');
-        expect($fv->getDevice())->toBe(Device::Cpu);
+        expect($fv->getProvider())->toBe(Provider::Ultralytics)
+            ->and($fv->getModel())->toBe('yolo26s.pt')
+            ->and($fv->getDevice())->toBe(Device::Cpu);
+    });
+
+    it('sets YOLOE model via enum', function () {
+        $fv = FluentVision::make();
+        $fv->model(YoloModel::YOLOE26s);
+
+        expect($fv->getModel())->toBe('yoloe-26s-seg.pt');
+    });
+
+    it('sets YOLOE prompt-free model via enum', function () {
+        $fv = FluentVision::make();
+        $fv->model(YoloModel::YOLOE26sPF);
+
+        expect($fv->getModel())->toBe('yoloe-26s-seg-pf.pt');
     });
 
     it('throws when detecting without image', function () {
