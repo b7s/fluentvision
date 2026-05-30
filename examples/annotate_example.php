@@ -19,6 +19,7 @@ $imagesDir = __DIR__.'/images';
 $images = [
     'factory-workers-handshaking-each-other-production-line-yellow-helmet.jpg',
     'modern-workspace-with-laptop-coffee-plants.jpg',
+    'woman-bike-cars-trees-road-day.jpg',
     'woman-cup-coffe.jpg',
 ];
 
@@ -37,7 +38,7 @@ foreach ($images as $filename) {
 
     $result = FluentVision::make()
         ->useUltralytics()
-        ->model(YoloModel::YOLO26s)
+        ->model(YoloModel::YOLO26m)
         ->useCpu()
         ->conf(0.4)
         ->image($path)

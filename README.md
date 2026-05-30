@@ -118,19 +118,19 @@ $result = FluentVision::make()
 
 ![Woman cup detection](docs/images/woman-cup-coffe.jpg)
 
-### Street Scene
+### Street Scene with Segment
 
 ```php
 $result = FluentVision::make()
     ->useUltralytics()
-    ->model(YoloModel::YOLO26s)
+    ->model(YoloModel::YOLOE26mPF) // Segment with Prompt free
     ->conf(0.4)
     ->image('woman-bike-cars-trees-road-day.jpg')
     ->detect();
 // 9 detections: person (90.6%), bicycle (91.2%), 7x car
 ```
 
-![Street scene annotated](docs/images/woman-bike-cars-trees-road-day-annotated.jpg)
+![Street scene annotated](docs/images/woman-bike-cars-trees-road-day-annotated.jpg?_=1)
 
 ## Detection Result Array
 
