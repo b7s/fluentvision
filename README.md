@@ -77,7 +77,7 @@ $result = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLOE26s)
     ->useCpu()
-    ->conf(0.25)
+    ->conf(0.25) // default: 0.4
     ->prompts(['person', 'yellow hard hat'])
     ->image('factory.jpg')
     ->detect();
@@ -98,7 +98,6 @@ Runs on **CPU** (~0.15s/image). See [Providers doc](docs/providers.md#yoloe-26-o
 $result = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLO26s)
-    ->conf(0.4)
     ->image('modern-workspace-with-laptop-coffee-plants.jpg')
     ->detect();
 ```
@@ -111,7 +110,7 @@ $result = FluentVision::make()
 $result = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLO26s)
-    ->conf(0.4)
+    ->conf(0.6)
     ->image('woman-cup-coffe.jpg')
     ->detect();
 ```
@@ -124,7 +123,7 @@ $result = FluentVision::make()
 $result = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLOE26mPF) // Segment with Prompt free
-    ->conf(0.4)
+    ->conf(0.8)
     ->image('woman-bike-cars-trees-road-day.jpg')
     ->detect();
 // 9 detections: person (90.6%), bicycle (91.2%), 7x car

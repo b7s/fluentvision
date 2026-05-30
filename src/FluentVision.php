@@ -36,13 +36,13 @@ class FluentVision
 
     private string $task = 'detect';
 
-    private float $conf = 0.25;
+    private float $conf;
 
-    private float $iou = 0.7;
+    private float $iou;
 
-    private int $imgsz = 640;
+    private int $imgsz;
 
-    private int $maxDet = 300;
+    private int $maxDet;
 
     /** @var array<int, string> */
     private array $classes = [];
@@ -81,7 +81,7 @@ class FluentVision
         $this->config = $config ?? new Config($this->configPath);
         $this->provider = Provider::from($this->config->defaultProvider());
         $this->device = Device::from($this->config->string('default_device', 'cpu'));
-        $this->conf = $this->config->float('default_conf', 0.25);
+        $this->conf = $this->config->float('default_conf', 0.4);
         $this->iou = $this->config->float('default_iou', 0.7);
         $this->imgsz = $this->config->integer('default_imgsz', 640);
         $this->maxDet = $this->config->integer('default_max_det', 300);

@@ -8,40 +8,40 @@ describe('Config', function () {
     it('loads defaults when no config file exists', function () {
         $config = new Config('/nonexistent/path');
 
-        expect($config->defaultProvider())->toBe('ultralytics');
-        expect($config->timeout())->toBe(0);
-        expect($config->verbose())->toBeFalse();
+        expect($config->defaultProvider())->toBe('ultralytics')
+            ->and($config->timeout())->toBe(0)
+            ->and($config->verbose())->toBeFalse();
     });
 
     it('loads from test config file', function () {
         $config = new Config(__DIR__.'/../fixtures/test-config.php');
 
-        expect($config->defaultProvider())->toBe('ultralytics');
-        expect($config->modelDir())->toBe('/tmp/fluentvision-test-models');
+        expect($config->defaultProvider())->toBe('ultralytics')
+            ->and($config->modelDir())->toBe('/tmp/fluentvision-test-models');
     });
 
     it('returns typed values', function () {
         $config = new Config('/nonexistent/path');
 
-        expect($config->string('default_provider', 'fallback'))->toBe('ultralytics');
-        expect($config->integer('timeout', 999))->toBe(0);
-        expect($config->float('default_conf', 0.99))->toBe(0.25);
-        expect($config->bool('verbose', true))->toBeFalse();
+        expect($config->string('default_provider', 'fallback'))->toBe('ultralytics')
+            ->and($config->integer('timeout', 999))->toBe(0)
+            ->and($config->float('default_conf', 0.99))->toBe(0.25)
+            ->and($config->bool('verbose', true))->toBeFalse();
     });
 
     it('returns fallback for missing keys', function () {
         $config = new Config('/nonexistent/path');
 
-        expect($config->get('nonexistent_key'))->toBeNull();
-        expect($config->get('nonexistent_key', 'default'))->toBe('default');
-        expect($config->string('nonexistent_key', 'fallback'))->toBe('fallback');
+        expect($config->get('nonexistent_key'))->toBeNull()
+            ->and($config->get('nonexistent_key', 'default'))->toBe('default')
+            ->and($config->string('nonexistent_key', 'fallback'))->toBe('fallback');
     });
 
     it('returns all config values', function () {
         $config = new Config('/nonexistent/path');
 
-        expect($config->all())->toHaveKey('default_provider');
-        expect($config->all())->toHaveKey('timeout');
+        expect($config->all())->toHaveKey('default_provider')
+            ->and($config->all())->toHaveKey('timeout');
     });
 
     it('resolves python venv path from home', function () {

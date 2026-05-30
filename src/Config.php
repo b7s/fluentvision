@@ -144,7 +144,7 @@ class Config
             'nanodet_default_model' => 'nanodet-plus-m-416',
             'default_task' => 'detect',
             'default_device' => 'cpu',
-            'default_conf' => 0.25,
+            'default_conf' => 0.4,
             'default_iou' => 0.7,
             'default_imgsz' => 640,
             'default_max_det' => 300,
