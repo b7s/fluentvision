@@ -20,12 +20,15 @@ use RuntimeException;
 use Throwable;
 
 use function file_exists;
+use function str_starts_with;
 
 class FluentVision
 {
     private Config $config;
 
     private Provider $provider;
+
+    private bool $providerExplicitlySet = false;
 
     private Device $device;
 
@@ -46,6 +49,10 @@ class FluentVision
 
     /** @var array<int, string> */
     private array $prompts = [];
+
+    private string $customConfig = '';
+
+    private string $customCheckpoint = '';
 
     private bool $augment = false;
 
@@ -102,6 +109,7 @@ class FluentVision
     public function provider(Provider $provider): self
     {
         $this->provider = $provider;
+        $this->providerExplicitlySet = true;
 
         return $this;
     }
@@ -124,6 +132,10 @@ class FluentVision
             $this->model = $model->dirname();
         } else {
             $this->model = $model;
+        }
+
+        if (! $this->providerExplicitlySet) {
+            $this->inferProviderFromModel();
         }
 
         return $this;
@@ -203,6 +215,24 @@ class FluentVision
         return $this;
     }
 
+    /**
+     * Use a custom NanoDet model with explicit config and checkpoint paths.
+     *
+     * @param  string  $configPath  Absolute path to NanoDet config YAML
+     * @param  string  $checkpointPath  Absolute path to NanoDet checkpoint (.ckpt)
+     */
+    public function nanodetCustom(string $configPath, string $checkpointPath): self
+    {
+        $this->customConfig = $configPath;
+        $this->customCheckpoint = $checkpointPath;
+
+        if (! $this->providerExplicitlySet) {
+            $this->provider = Provider::Nanodet;
+        }
+
+        return $this;
+    }
+
     public function augment(bool $augment = true): self
     {
         $this->augment = $augment;
@@ -258,6 +288,7 @@ class FluentVision
             throw new RuntimeException('No image path set. Call image() before detect().');
         }
 
+        $this->autoInferProvider();
         $resolvedModel = $this->resolveModel();
 
         return $this->inferenceService->detectImage(
@@ -275,6 +306,7 @@ class FluentVision
             throw new RuntimeException('No video path set. Call video() before detectVideo().');
         }
 
+        $this->autoInferProvider();
         $resolvedModel = $this->resolveModel();
 
         return $this->inferenceService->detectVideo(
@@ -292,6 +324,7 @@ class FluentVision
             throw new RuntimeException('No image path set. Call image() before annotate().');
         }
 
+        $this->autoInferProvider();
         $resolvedModel = $this->resolveModel();
 
         return $this->inferenceService->annotateImage(
@@ -340,6 +373,10 @@ class FluentVision
                 return $this->modelService->resolveUltralyticsModel($yoloModel);
             }
 
+            if (str_starts_with($modelValue, '/') && file_exists($modelValue)) {
+                return $modelValue;
+            }
+
             $fullPath = $this->config->modelDir().'/'.$modelValue;
 
             if (file_exists($fullPath)) {
@@ -350,6 +387,34 @@ class FluentVision
         }
 
         return $modelValue;
+    }
+
+    private function autoInferProvider(): void
+    {
+        if ($this->providerExplicitlySet) {
+            return;
+        }
+
+        if ($this->customConfig !== '' && $this->customCheckpoint !== '') {
+            $this->provider = Provider::Nanodet;
+
+            return;
+        }
+
+        $this->inferProviderFromModel();
+    }
+
+    private function inferProviderFromModel(): void
+    {
+        if ($this->model === '') {
+            return;
+        }
+
+        $inferred = Provider::inferFromModel($this->model);
+
+        if ($inferred !== null) {
+            $this->provider = $inferred;
+        }
     }
 
     /**
@@ -373,11 +438,16 @@ class FluentVision
         ];
 
         if ($this->provider->isNanodet()) {
-            $nanodetModel = $this->resolveNanodetModelPaths();
+            if ($this->customConfig !== '' && $this->customCheckpoint !== '') {
+                $options['config'] = $this->customConfig;
+                $options['checkpoint'] = $this->customCheckpoint;
+            } else {
+                $nanodetModel = $this->resolveNanodetModelPaths();
 
-            if ($nanodetModel !== null) {
-                $options['config'] = $nanodetModel['config'];
-                $options['checkpoint'] = $nanodetModel['checkpoint'];
+                if ($nanodetModel !== null) {
+                    $options['config'] = $nanodetModel['config'];
+                    $options['checkpoint'] = $nanodetModel['checkpoint'];
+                }
             }
         }
 

@@ -46,6 +46,7 @@ Provider selection order:
 | Method | Parameter | Description |
 |--------|-----------|-------------|
 | `model(YoloModel\|NanodetModel\|string $model)` | Enum or string | Set the model to use |
+| `nanodetCustom(string $configPath, string $checkpointPath)` | Two absolute paths | Use a custom NanoDet model |
 
 ```php
 use B7s\FluentVision\Enums\YoloModel;
@@ -55,12 +56,18 @@ use B7s\FluentVision\Enums\NanodetModel;
 $vision->model(YoloModel::YOLO26s);
 $vision->model(NanodetModel::PlusM416);
 
-// Via string
+// Via string (built-in or filename)
 $vision->model('yolo26s.pt');
 $vision->model('nanodet-plus-m-416');
+
+// Via string (absolute path to custom trained model)
+$vision->model('/path/to/my-trained-model.pt');
+
+// Custom NanoDet model (requires config + checkpoint)
+$vision->nanodetCustom('/path/config.yml', '/path/model.ckpt');
 ```
 
-If no model is set, the default from config is used (`yolo26s.pt` for Ultralytics, `nanodet-plus-m-416` for NanoDet).
+If no model is set, the default from config is used (`yolo26s.pt` for Ultralytics, `nanodet-plus-m-416` for NanoDet). For custom trained models, see [Custom Models](custom-models.md).
 
 ### Device Selection
 

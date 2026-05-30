@@ -115,4 +115,47 @@ describe('FluentVision', function () {
 
         expect($fv->getConfig()->modelDir())->toBe('/tmp/fluentvision-test-models');
     });
+
+    it('sets model via absolute path string', function () {
+        $fv = FluentVision::make();
+        $fv->model('/home/user/models/my-custom-model.pt');
+
+        expect($fv->getModel())->toBe('/home/user/models/my-custom-model.pt');
+    });
+
+    it('sets nanodetCustom with config and checkpoint', function () {
+        $fv = FluentVision::make();
+        $fv->nanodetCustom('/path/to/config.yml', '/path/to/checkpoint.ckpt');
+
+        expect($fv)->toBeInstanceOf(FluentVision::class);
+    });
+
+    it('auto-infers ultralytics provider from .pt model path', function () {
+        $fv = FluentVision::make();
+        $fv->model('my-trained-model.pt');
+
+        expect($fv->getProvider())->toBe(Provider::Ultralytics);
+    });
+
+    it('auto-infers nanodet provider from .ckpt model path', function () {
+        $fv = FluentVision::make();
+        $fv->model('custom-nanodet.ckpt');
+
+        expect($fv->getProvider())->toBe(Provider::Nanodet);
+    });
+
+    it('does not override explicitly set provider', function () {
+        $fv = FluentVision::make();
+        $fv->useUltralytics();
+        $fv->model('custom-nanodet.ckpt');
+
+        expect($fv->getProvider())->toBe(Provider::Ultralytics);
+    });
+
+    it('auto-infers provider from .onnx model path', function () {
+        $fv = FluentVision::make();
+        $fv->model('exported-model.onnx');
+
+        expect($fv->getProvider())->toBe(Provider::Ultralytics);
+    });
 });

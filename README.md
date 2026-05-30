@@ -171,17 +171,17 @@ use B7s\FluentVision\Enums\NanodetModel;
 use B7s\FluentVision\Enums\YoloTask;
 
 FluentVision::make()
-    ->provider(Provider::Ultralytics)   // or ->useUltralytics() / ->useNanodet()
-    ->model(YoloModel::YOLO26s)         // or ->model('yolo26s.pt')
-    ->useCpu()                          // or ->useGpu()
-    ->conf(0.5)                         // confidence threshold
-    ->iou(0.45)                         // IoU threshold (NMS)
-    ->imgsz(640)                        // inference image size
-    ->maxDet(100)                       // max detections per image
+    ->provider(Provider::Ultralytics) // or ->useUltralytics() / ->useNanodet()
+    ->model(YoloModel::YOLO26s) // or ->model('yolo26s.pt') or ->model('/path/to/custom.pt')
+    ->useCpu() // or ->useGpu()
+    ->conf(0.5) // confidence threshold
+    ->iou(0.45) // IoU threshold (NMS)
+    ->imgsz(640) // inference image size
+    ->maxDet(100) // max detections per image
     ->classes(['person', 'car']) // filter to specific classes
     ->prompts(['person wearing red', 'hard hat']) // YOLOE text prompts
     ->augment() // test-time augmentation
-    ->half()                            // FP16 inference (GPU)
+    ->half() // FP16 inference (GPU)
     ->image('/path/to/image.jpg')
     ->detect();
 ```
@@ -257,6 +257,26 @@ $result = FluentVision::make()
     ->detect();
 ```
 
+### Custom Trained Models
+
+Pass a path to your own trained model — provider is auto-inferred from the file extension:
+
+```php
+// Ultralytics (.pt, .onnx, .engine, etc.) — auto-detected
+$result = FluentVision::make()
+    ->model('/path/to/my-trained-model.pt')
+    ->image('photo.jpg')
+    ->detect();
+
+// NanoDet — use nanodetCustom() for config + checkpoint
+$result = FluentVision::make()
+    ->nanodetCustom('/path/config.yml', '/path/model.ckpt')
+    ->image('photo.jpg')
+    ->detect();
+```
+
+See [Custom Models](docs/custom-models.md) for full details on supported formats, model resolution, and provider auto-inference.
+
 ## Configuration
 
 Create `fluentvision-config.php` in your project root:
@@ -323,6 +343,7 @@ vendor/bin/fluentvision install --config=/path/to/config.php
 - [Configuration Reference](docs/configuration.md) — all config options
 - [Usage Guide](docs/usage.md) — complete fluent API reference
 - [Providers](docs/providers.md) — Ultralytics vs NanoDet details
+- [Custom Models](docs/custom-models.md) — using your own trained models
 - [Result Objects](docs/results.md) — InferenceResult, DetectionResult, BoundingBox API
 - [CLI Commands](docs/cli.md) — install, doctor, and options
 

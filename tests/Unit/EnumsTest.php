@@ -36,6 +36,37 @@ describe('Provider enum', function () {
         expect($options)->toHaveKey('ultralytics')
             ->and($options)->toHaveKey('nanodet');
     });
+
+    it('infers provider from .pt extension', function () {
+        expect(Provider::inferFromModel('my-custom-model.pt'))->toBe(Provider::Ultralytics);
+    });
+
+    it('infers provider from .onnx extension', function () {
+        expect(Provider::inferFromModel('model.onnx'))->toBe(Provider::Ultralytics);
+    });
+
+    it('infers provider from .engine extension', function () {
+        expect(Provider::inferFromModel('model.engine'))->toBe(Provider::Ultralytics);
+    });
+
+    it('infers provider from .ckpt extension', function () {
+        expect(Provider::inferFromModel('custom-nanodet.ckpt'))->toBe(Provider::Nanodet);
+    });
+
+    it('returns null for unknown extension', function () {
+        expect(Provider::inferFromModel('model.unknown'))->toBeNull()
+            ->and(Provider::inferFromModel('model'))->toBeNull();
+    });
+
+    it('infers provider from absolute path', function () {
+        expect(Provider::inferFromModel('/home/user/models/custom.pt'))->toBe(Provider::Ultralytics)
+            ->and(Provider::inferFromModel('/home/user/models/custom.ckpt'))->toBe(Provider::Nanodet);
+    });
+
+    it('lists ultralytics and nanodet extensions', function () {
+        expect(Provider::ultralyticsExtensions())->toContain('pt', 'onnx', 'engine')
+            ->and(Provider::nanodetExtensions())->toBe(['ckpt']);
+    });
 });
 
 describe('YoloModel enum', function () {
