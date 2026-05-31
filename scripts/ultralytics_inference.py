@@ -117,7 +117,9 @@ def run_video_inference(model, args):
     if args.classes is not None:
         predict_kwargs["classes"] = [int(c) for c in args.classes.split(",")]
 
+    total_detections = 0
     frames = []
+    last_result = None
     for result in model.predict(**predict_kwargs):
         detections = []
         for box in result.boxes:
@@ -132,21 +134,32 @@ def run_video_inference(model, args):
                     "y2": xyxy[3],
                 },
             })
+        total_detections += len(detections)
         frames.append({
             "image_path": str(result.path) if result.path else "",
             "detections": detections,
             "inference_time": 0,
         })
+        last_result = result
 
     total_time = time.time() - start
 
-    return {
+    output = {
         "video_path": str(args.video),
         "provider": "ultralytics",
         "model": args.model,
         "total_inference_time": round(total_time, 4),
+        "detection_count": total_detections,
         "frames": frames,
     }
+
+    if args.save and last_result is not None and last_result.save_dir:
+        save_dir = Path(last_result.save_dir)
+        saved_files = list(save_dir.glob("*")) if save_dir.exists() else []
+        if saved_files:
+            output["annotated_path"] = str(saved_files[-1].resolve())
+
+    return output
 
 
 def main():
