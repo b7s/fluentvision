@@ -12,6 +12,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Ultralytics YOLO inference")
     parser.add_argument("--image", type=str, help="Path to input image")
     parser.add_argument("--video", type=str, help="Path to input video")
+    parser.add_argument("--stream", type=str, help="Stream source (rtsp://, rtmp://, tcp://, webcam index)")
+    parser.add_argument("--max-frames", type=int, default=0, help="Max frames for streaming (0 = unlimited)")
     parser.add_argument("--model", type=str, default="yolo26s.pt", help="Model filename")
     parser.add_argument("--task", type=str, default="detect", help="Task type")
     parser.add_argument("--device", type=str, default="cpu", help="Device (cpu or 0)")
@@ -162,6 +164,84 @@ def run_video_inference(model, args):
     return output
 
 
+def run_stream_inference(model, args, real_stdout):
+    predict_kwargs = {
+        "source": args.stream,
+        "conf": args.conf,
+        "iou": args.iou,
+        "imgsz": args.imgsz,
+        "device": args.device,
+        "max_det": args.max_det,
+        "augment": args.augment,
+        "half": args.half,
+        "stream": True,
+        "verbose": False,
+    }
+
+    if not is_yoloe_model(model):
+        predict_kwargs["agnostic_nms"] = args.agnostic_nms
+        predict_kwargs["end2end"] = args.end2end
+
+    if args.classes is not None:
+        predict_kwargs["classes"] = [int(c) for c in args.classes.split(",")]
+
+    frame_count = 0
+    total_detections = 0
+    start = time.time()
+
+    for result in model.predict(**predict_kwargs):
+        detections = []
+        for box in result.boxes:
+            xyxy = box.xyxy[0].tolist()
+            detections.append({
+                "class": result.names[int(box.cls[0])],
+                "confidence": float(box.conf[0]),
+                "box": {
+                    "x1": xyxy[0],
+                    "y1": xyxy[1],
+                    "x2": xyxy[2],
+                    "y2": xyxy[3],
+                },
+            })
+
+        frame_count += 1
+        total_detections += len(detections)
+
+        frame_output = {
+            "frame": frame_count,
+            "source": str(args.stream),
+            "provider": "ultralytics",
+            "model": args.model,
+            "detection_count": len(detections),
+            "detections": detections,
+            "image_path": str(result.path) if result.path else "",
+            "inference_time": 0,
+            "type": "frame",
+        }
+
+        sys.stdout = real_stdout
+        print(json.dumps(frame_output), flush=True)
+        sys.stdout = sys.stderr
+
+        if args.max_frames > 0 and frame_count >= args.max_frames:
+            break
+
+    total_time = time.time() - start
+
+    summary_output = {
+        "source": str(args.stream),
+        "provider": "ultralytics",
+        "model": args.model,
+        "frame_count": frame_count,
+        "total_detections": total_detections,
+        "total_time": round(total_time, 4),
+        "stopped": args.max_frames > 0,
+        "type": "summary",
+    }
+
+    return summary_output
+
+
 def main():
     args = parse_args()
 
@@ -189,13 +269,19 @@ def main():
         output = run_image_inference(model, args)
     elif args.video:
         output = run_video_inference(model, args)
+    elif args.stream:
+        output = run_stream_inference(model, args, real_stdout)
     else:
         sys.stdout = real_stdout
-        print(json.dumps({"error": "Either --image or --video is required"}))
+        print(json.dumps({"error": "Either --image, --video, or --stream is required"}))
         sys.exit(1)
 
-    sys.stdout = real_stdout
-    print(json.dumps(output))
+    if args.stream:
+        sys.stdout = real_stdout
+        print(json.dumps(output))
+    else:
+        sys.stdout = real_stdout
+        print(json.dumps(output))
 
 
 if __name__ == "__main__":

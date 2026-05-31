@@ -177,21 +177,28 @@ describe('Device enum', function () {
 
 describe('MediaType enum', function () {
     it('has correct cases', function () {
-        expect(MediaType::cases())->toHaveCount(2)
+        expect(MediaType::cases())->toHaveCount(3)
             ->and(MediaType::Image->value)->toBe('image')
-            ->and(MediaType::Video->value)->toBe('video');
+            ->and(MediaType::Video->value)->toBe('video')
+            ->and(MediaType::Stream->value)->toBe('stream');
     });
 
     it('returns correct labels', function () {
         expect(MediaType::Image->label())->toBe('Image')
-            ->and(MediaType::Video->label())->toBe('Video');
+            ->and(MediaType::Video->label())->toBe('Video')
+            ->and(MediaType::Stream->label())->toBe('Stream');
     });
 
     it('checks media type', function () {
         expect(MediaType::Image->isImage())->toBeTrue()
             ->and(MediaType::Image->isVideo())->toBeFalse()
+            ->and(MediaType::Image->isStream())->toBeFalse()
             ->and(MediaType::Video->isVideo())->toBeTrue()
-            ->and(MediaType::Video->isImage())->toBeFalse();
+            ->and(MediaType::Video->isImage())->toBeFalse()
+            ->and(MediaType::Video->isStream())->toBeFalse()
+            ->and(MediaType::Stream->isStream())->toBeTrue()
+            ->and(MediaType::Stream->isImage())->toBeFalse()
+            ->and(MediaType::Stream->isVideo())->toBeFalse();
     });
 
     it('infers image type from path', function () {
@@ -204,6 +211,27 @@ describe('MediaType enum', function () {
         expect(MediaType::inferFromPath('/tmp/clip.mp4'))->toBe(MediaType::Video)
             ->and(MediaType::inferFromPath('/tmp/clip.avi'))->toBe(MediaType::Video)
             ->and(MediaType::inferFromPath('/tmp/clip.mov'))->toBe(MediaType::Video);
+    });
+
+    it('infers stream type from rtsp source', function () {
+        expect(MediaType::inferFromPath('rtsp://192.168.1.100:554/stream'))->toBe(MediaType::Stream)
+            ->and(MediaType::inferFromPath('rtmp://server/live/stream'))->toBe(MediaType::Stream)
+            ->and(MediaType::inferFromPath('tcp://192.168.1.1:5000'))->toBe(MediaType::Stream)
+            ->and(MediaType::inferFromPath('udp://239.0.0.1:1234'))->toBe(MediaType::Stream)
+            ->and(MediaType::inferFromPath('0'))->toBe(MediaType::Stream)
+            ->and(MediaType::inferFromPath('1'))->toBe(MediaType::Stream);
+    });
+
+    it('detects stream sources', function () {
+        expect(MediaType::isStreamSource('rtsp://cam.local/stream'))->toBeTrue()
+            ->and(MediaType::isStreamSource('rtmp://server/live'))->toBeTrue()
+            ->and(MediaType::isStreamSource('tcp://host:5000'))->toBeTrue()
+            ->and(MediaType::isStreamSource('udp://host:5000'))->toBeTrue()
+            ->and(MediaType::isStreamSource('http://cam.local/mjpeg'))->toBeTrue()
+            ->and(MediaType::isStreamSource('https://cam.local/mjpeg'))->toBeTrue()
+            ->and(MediaType::isStreamSource('0'))->toBeTrue()
+            ->and(MediaType::isStreamSource('/tmp/video.mp4'))->toBeFalse()
+            ->and(MediaType::isStreamSource('image.jpg'))->toBeFalse();
     });
 
     it('defaults to image for unknown extensions', function () {

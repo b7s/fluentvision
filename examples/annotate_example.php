@@ -40,7 +40,7 @@ foreach ($images as $filename) {
         ->useUltralytics()
         ->model(YoloModel::YOLO26m)
         ->useCpu()
-        ->conf(0.4)
+        ->confidence(0.4)
         ->media($path)
         ->annotate();
 

@@ -8,6 +8,10 @@ use B7s\FluentVision\Enums\NanodetModel;
 use B7s\FluentVision\Enums\Provider;
 use B7s\FluentVision\Enums\YoloModel;
 use B7s\FluentVision\FluentVision;
+use B7s\FluentVision\Results\StreamResult;
+use B7s\FluentVision\Services\InferenceServiceInterface;
+use B7s\FluentVision\Services\ModelServiceInterface;
+use B7s\FluentVision\Services\StreamServiceInterface;
 
 describe('FluentVision', function () {
     it('creates with make factory', function () {
@@ -69,7 +73,7 @@ describe('FluentVision', function () {
             ->useUltralytics()
             ->model(YoloModel::YOLO26s)
             ->useCpu()
-            ->conf(0.5)
+            ->confidence(0.5)
             ->iou(0.45)
             ->imgsz(1280)
             ->maxDet(100);
@@ -187,5 +191,77 @@ describe('FluentVision', function () {
         $result = $fv->media('/tmp/photo.jpg');
 
         expect($result)->toBeInstanceOf(FluentVision::class);
+    });
+
+    it('sets stream source and callback fluently', function () {
+        $fv = FluentVision::make();
+        $result = $fv->stream('rtsp://example.com/live', static fn () => null);
+
+        expect($result)->toBeInstanceOf(FluentVision::class)
+            ->and($fv->getMediaType())->toBe(MediaType::Stream);
+    });
+
+    it('sets maxFrames fluently', function () {
+        $fv = FluentVision::make();
+        $result = $fv->maxFrames(100);
+
+        expect($result)->toBeInstanceOf(FluentVision::class);
+    });
+
+    it('throws when startStream called without stream source', function () {
+        $fv = FluentVision::make();
+
+        expect(fn () => $fv->startStream())->toThrow(RuntimeException::class);
+    });
+
+    it('throws when startStream called without callback', function () {
+        $fv = FluentVision::make();
+        $fv->stream('rtsp://test', static fn () => null);
+        $reflection = new ReflectionClass($fv);
+        $prop = $reflection->getProperty('streamCallback');
+        $prop->setAccessible(true);
+        $prop->setValue($fv, null);
+
+        expect(fn () => $fv->startStream())->toThrow(RuntimeException::class);
+    });
+
+    it('delegates startStream to StreamServiceInterface', function () {
+        $expectedResult = new StreamResult(
+            source: 'rtsp://test',
+            provider: 'ultralytics',
+            model: 'yolo26s.pt',
+            frames: [],
+            totalTime: 1.0,
+            stopped: true,
+        );
+
+        $inferenceService = Mockery::mock(InferenceServiceInterface::class);
+        $modelService = Mockery::mock(ModelServiceInterface::class);
+        $modelService->shouldReceive('resolveUltralyticsModel')->andReturn('/home/user/.fluentvision/models/yolo26s.pt');
+
+        $streamService = Mockery::mock(StreamServiceInterface::class);
+        $streamService->shouldReceive('stream')
+            ->once()
+            ->withArgs(function (Provider $p, string $src, string $m, Device $d, callable $cb, array $opts) {
+                return $src === 'rtsp://test' && $m === '/home/user/.fluentvision/models/yolo26s.pt';
+            })
+            ->andReturn($expectedResult);
+
+        $fv = new FluentVision(
+            inferenceService: $inferenceService,
+            modelService: $modelService,
+            streamService: $streamService,
+        );
+
+        $result = $fv->stream('rtsp://test', static fn () => null)
+            ->model(YoloModel::YOLO26s)
+            ->useCpu()
+            ->startStream();
+
+        expect($result)->toBe($expectedResult)
+            ->and($result->source)->toBe('rtsp://test')
+            ->and($result->stopped)->toBeTrue();
+
+        Mockery::close();
     });
 });

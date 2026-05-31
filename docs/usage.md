@@ -85,7 +85,7 @@ $vision->useGpu();
 
 | Method | Type | Default | Description |
 |--------|------|---------|-------------|
-| `conf(float $conf)` | float | 0.25 | Confidence threshold (0.0 - 1.0) |
+| `confidence(float $conf)` | float | 0.25 | Confidence threshold (0.0 - 1.0) |
 | `iou(float $iou)` | float | 0.7 | IoU threshold for NMS (0.0 - 1.0) |
 | `imgsz(int $imgsz)` | int | 640 | Inference image size in pixels |
 | `maxDet(int $maxDet)` | int | 300 | Maximum detections per image |
@@ -96,7 +96,7 @@ $vision->useGpu();
 ```php
 use B7s\FluentVision\Enums\YoloTask;
 
-$vision->conf(0.5) // Only detections above 50% confidence
+$vision->confidence(0.5) // Only detections above 50% confidence
     ->iou(0.45) // Stricter NMS overlap threshold
     ->imgsz(1280) // Higher resolution inference
     ->maxDet(50) // Cap at 50 detections
@@ -122,15 +122,42 @@ $vision->augment()       // TTA for better accuracy
 
 ### Video Options
 
-| Method                      | Type | Default | Description             |
+| Method | Type | Default | Description |
 |-----------------------------|------|---------|-------------------------|
-| `everyNframes(int $stride)` | int  | 1       | Process every Nth frame |
+| `everyNframes(int $stride)` | int | 1 | Process every Nth frame |
 
 ```php
 $vision->everyNframes(5) // Process every 5th frame
-    ->media('clip.mp4')
-    ->detect();
+->media('clip.mp4')
+->detect();
 ```
+
+### Streaming Options
+
+| Method | Type | Default | Description |
+|--------|------|---------|-------------|
+| `stream(string $source, callable $onFrame)` | string, callable | — | Set stream source (RTSP, RTMP, HTTP, webcam) and per-frame callback |
+| `maxFrames(int $maxFrames)` | int | 0 | Limit frames to process (0 = unlimited) |
+| `startStream()` | — | — | **Terminal method** — start stream, returns `StreamResult` |
+
+```php
+use B7s\FluentVision\Enums\YoloModel;
+
+$result = FluentVision::make()
+    ->useUltralytics()
+    ->model(YoloModel::YOLO26s)
+    ->confidence(0.5)
+    ->stream('rtsp://192.168.1.100:554/live', function ($frame, $frameNumber) {
+        echo sprintf("Frame %d: %d detections\n", $frameNumber, $frame->getDetectionCount());
+    })
+    ->maxFrames(100)
+    ->startStream();
+
+echo "Processed {$result->getFrameCount()} frames\n";
+echo "Total detections: {$result->getTotalDetections()}\n";
+```
+
+Only **Ultralytics** supports streaming. See [Real-Time Streaming](realtime-streaming.md) for full details.
 
 ### Input Methods
 
@@ -156,6 +183,7 @@ $vision->media('data.raw', MediaType::Image);
 | `detect()` | `InferenceResult \| VideoInferenceResult` | Run detection on image or video |
 | `annotate()` | `AnnotatedResult` | Run detection and save annotated output |
 | `process()` | `ProcessResult` | Run detection + annotation in a single call |
+| `startStream()` | `StreamResult` | Start real-time stream detection (after `stream()`) |
 
 ### Process Flags
 
@@ -210,7 +238,7 @@ foreach ($result->detections as $d) {
 
 ```php
 $result = FluentVision::make()
-    ->conf(0.8)
+    ->confidence(0.8)
     ->classes(['person'])
     ->media('crowd.jpg')
     ->detect();
@@ -258,7 +286,7 @@ $result = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLOE26s)
     ->prompts(['person wearing red', 'hard hat', 'nighttime scene'])
-    ->conf(0.25)
+    ->confidence(0.25)
     ->media('factory.jpg')
     ->detect();
 
@@ -266,7 +294,7 @@ $result = FluentVision::make()
 $result = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLOE26sPF)
-    ->conf(0.25)
+    ->confidence(0.25)
     ->media('workspace.jpg')
     ->detect();
 ```
@@ -278,7 +306,7 @@ Both YOLOE variants run on **CPU** (~0.15s per image for YOLOE-26s). See [Provid
 ```php
 $result = FluentVision::make()
     ->media('traffic.mp4')  // .mp4 auto-detected as video
-    ->conf(0.4)
+    ->confidence(0.4)
     ->everyNframes(10) // Sample every 10th frame
     ->detect();
 
@@ -326,13 +354,13 @@ $vision->getConfig();    // Config object
 
 ## Method Chaining
 
-All setter methods return `self` for fluent chaining. Only the terminal methods (`detect()`, `annotate()`, `process()`) return result objects and break the chain.
+All setter methods return `self` for fluent chaining. Only the terminal methods (`detect()`, `annotate()`, `process()`, `startStream()`) return result objects and break the chain.
 
 ```php
 // Build up configuration
 $vision = FluentVision::make()
     ->useUltralytics()
-    ->conf(0.5)
+    ->confidence(0.5)
     ->imgsz(640);
 
 // Reuse the same configuration for multiple images

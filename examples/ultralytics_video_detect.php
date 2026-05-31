@@ -21,7 +21,7 @@ $result = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLO26s)
     ->useCpu()
-    ->conf(0.4)
+    ->confidence(0.4)
     ->everyNframes(10)
     ->media($videoPath)
     ->detect();
@@ -36,14 +36,14 @@ echo "Avg time: {$result->getAverageInferenceTime()}ms\n\n";
 
 foreach ($result->frames as $i => $frame) {
     $count = count($frame->detections);
-    echo sprintf("  Frame %3d: %2d detections", $i + 1, $count);
+    echo sprintf('  Frame %3d: %2d detections', $i + 1, $count);
 
     if ($count > 0) {
         $classes = [];
         foreach ($frame->detections as $d) {
             $classes[] = $d->class;
         }
-        echo ' (' . implode(', ', array_unique($classes)) . ')';
+        echo ' ('.implode(', ', array_unique($classes)).')';
     }
 
     echo "\n";
@@ -55,7 +55,7 @@ $processResult = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLO26s)
     ->useCpu()
-    ->conf(0.4)
+    ->confidence(0.4)
     ->everyNframes(10)
     ->savePath(__DIR__.'/output/video-process')
     ->withDetections()
@@ -66,4 +66,4 @@ $processResult = FluentVision::make()
 echo "Detections: {$processResult->getDetectionCount()}\n";
 echo "Total time: {$processResult->getTotalTime()}ms\n";
 echo "Annotated: {$processResult->getAnnotatedPath()}\n";
-echo "Has annotated file: " . ($processResult->hasAnnotatedImage() ? 'yes' : 'no') . "\n";
+echo 'Has annotated file: '.($processResult->hasAnnotatedImage() ? 'yes' : 'no')."\n";

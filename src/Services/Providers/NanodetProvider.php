@@ -28,6 +28,11 @@ class NanodetProvider implements ProviderContract
         return true;
     }
 
+    public function supportsStream(): bool
+    {
+        return false;
+    }
+
     /**
      * @param  array<string, mixed>  $options
      * @return array<int, string>

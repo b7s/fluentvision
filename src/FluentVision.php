@@ -13,6 +13,7 @@ use B7s\FluentVision\Enums\YoloTask;
 use B7s\FluentVision\Results\AnnotatedResult;
 use B7s\FluentVision\Results\InferenceResult;
 use B7s\FluentVision\Results\ProcessResult;
+use B7s\FluentVision\Results\StreamResult;
 use B7s\FluentVision\Results\VideoInferenceResult;
 use B7s\FluentVision\Services\InferenceService;
 use B7s\FluentVision\Services\InferenceServiceInterface;
@@ -20,6 +21,8 @@ use B7s\FluentVision\Services\ModelService;
 use B7s\FluentVision\Services\ModelServiceInterface;
 use B7s\FluentVision\Services\Providers\ProviderFactory;
 use B7s\FluentVision\Services\PythonService;
+use B7s\FluentVision\Services\StreamService;
+use B7s\FluentVision\Services\StreamServiceInterface;
 use JsonException;
 use RuntimeException;
 use Throwable;
@@ -82,15 +85,27 @@ class FluentVision
 
     private bool $wantsAnnotation = false;
 
+    private string $streamSource = '';
+
+    private int $maxFrames = 0;
+
+    /** @var callable(InferenceResult, int): void|null */
+    private $streamCallback = null;
+
     private InferenceServiceInterface $inferenceService;
 
     private ModelServiceInterface $modelService;
+
+    private ProviderFactory $providerFactory;
+
+    private StreamServiceInterface $streamService;
 
     public function __construct(
         private readonly ?string $configPath = null,
         ?Config $config = null,
         ?InferenceServiceInterface $inferenceService = null,
         ?ModelServiceInterface $modelService = null,
+        ?StreamServiceInterface $streamService = null,
     ) {
         $this->config = $config ?? new Config($this->configPath);
         $this->provider = Provider::from($this->config->defaultProvider());
@@ -107,12 +122,14 @@ class FluentVision
         );
 
         $providerFactory = new ProviderFactory($this->config->nanodetRepoPath());
+        $this->providerFactory = $providerFactory;
 
         $this->inferenceService = $inferenceService ?? new InferenceService($pythonService, $providerFactory);
         $this->modelService = $modelService ?? new ModelService(
             modelDir: $this->config->modelDir(),
             nanodetRepoPath: $this->config->nanodetRepoPath(),
         );
+        $this->streamService = $streamService ?? new StreamService($pythonService, $providerFactory);
     }
 
     public static function make(?string $configPath = null): self
@@ -176,7 +193,7 @@ class FluentVision
         return $this;
     }
 
-    public function conf(float $conf): self
+    public function confidence(float $conf): self
     {
         $this->conf = $conf;
 
@@ -321,6 +338,30 @@ class FluentVision
     }
 
     /**
+     * Set a real-time stream source for frame-by-frame detection.
+     *
+     * Accepts RTSP, RTMP, TCP, UDP, HTTP/HTTPS URLs, or a webcam index (e.g. "0").
+     * The callback receives an InferenceResult for each frame.
+     *
+     * @param  callable(InferenceResult $frame, int $frameNumber): void  $onFrame
+     */
+    public function stream(string $source, callable $onFrame): self
+    {
+        $this->streamSource = $source;
+        $this->streamCallback = $onFrame;
+        $this->mediaType = MediaType::Stream;
+
+        return $this;
+    }
+
+    public function maxFrames(int $maxFrames): self
+    {
+        $this->maxFrames = $maxFrames;
+
+        return $this;
+    }
+
+    /**
      * @throws JsonException
      */
     public function detect(): InferenceResult|VideoInferenceResult
@@ -398,6 +439,42 @@ class FluentVision
             mediaType: $this->resolveMediaType(),
             model: $resolvedModel,
             device: $this->device,
+            options: $options,
+        );
+    }
+
+    public function startStream(): StreamResult
+    {
+        if ($this->streamSource === '') {
+            throw new RuntimeException('No stream source set. Call stream() before startStream().');
+        }
+
+        if ($this->streamCallback === null) {
+            throw new RuntimeException('No stream callback set. Call stream(source, callback) before startStream().');
+        }
+
+        $onFrame = $this->streamCallback;
+
+        $this->autoInferProvider();
+
+        $provider = $this->providerFactory->make($this->provider);
+        if (! $provider->supportsStream()) {
+            throw new RuntimeException(sprintf('Provider "%s" does not support streaming.', $this->provider->value));
+        }
+
+        $resolvedModel = $this->resolveModel();
+        $options = $this->buildOptions();
+
+        if ($this->maxFrames > 0) {
+            $options['max_frames'] = $this->maxFrames;
+        }
+
+        return $this->streamService->stream(
+            providerType: $this->provider,
+            source: $this->streamSource,
+            model: $resolvedModel,
+            device: $this->device,
+            onFrame: $onFrame,
             options: $options,
         );
     }

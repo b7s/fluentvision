@@ -286,6 +286,58 @@ $data = $result->toArray();
 $json = $result->toJson();
 ```
 
+## StreamResult
+
+Returned by `->startStream()` when processing real-time streams (RTSP, RTMP, HTTP, webcam). Only available with the Ultralytics provider.
+
+```php
+readonly class StreamResult
+{
+    public function __construct(
+        public string $source,       // Stream URL or webcam index
+        public string $provider,     // 'ultralytics'
+        public string $model,        // Model filename
+        public array $frames,        // InferenceResult[]
+        public float $totalTime,     // Total wall-clock time in seconds
+        public bool $stopped,        // Whether stopped by maxFrames limit
+    ) {}
+}
+```
+
+### Methods
+
+| Method | Return | Description |
+|--------|--------|-------------|
+| `getFrameCount()` | int | Number of frames processed |
+| `getTotalDetections()` | int | Sum of detections across all frames |
+| `getAverageInferenceTime()` | float | Mean inference time per frame |
+| `toArray()` | array | Full structured output |
+| `toJson(int $flags = 0)` | string | JSON output |
+| `fromArray(array $data, array $frames = [])` | self | Create from raw data |
+
+```php
+$result = FluentVision::make()
+    ->useUltralytics()
+    ->model(YoloModel::YOLO26s)
+    ->stream('rtsp://192.168.1.100:554/live', function ($frame, $num) {
+        echo "Frame $num: " . $frame->getDetectionCount() . " detections\n";
+    })
+    ->maxFrames(100)
+    ->startStream();
+
+$result->getFrameCount();          // 100
+$result->getTotalDetections();     // 247
+$result->totalTime;                // 12.345 (seconds)
+$result->stopped;                  // true (stopped by maxFrames)
+
+// Per-frame access
+foreach ($result->frames as $frameResult) {
+    echo "Detections: " . count($frameResult->detections) . "\n";
+}
+```
+
+See [Real-Time Streaming](realtime-streaming.md) for complete usage guide.
+
 ## Common Patterns
 
 ### Count by Class

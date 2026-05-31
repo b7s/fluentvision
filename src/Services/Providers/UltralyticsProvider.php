@@ -24,6 +24,11 @@ class UltralyticsProvider implements ProviderContract
         return true;
     }
 
+    public function supportsStream(): bool
+    {
+        return true;
+    }
+
     /**
      * @param  array<string, mixed>  $options
      * @return array<int, string>
@@ -35,7 +40,11 @@ class UltralyticsProvider implements ProviderContract
         Device $device,
         array $options = [],
     ): array {
-        $mediaFlag = $mediaType->isVideo() ? '--video' : '--image';
+        $mediaFlag = match (true) {
+            $mediaType->isVideo() => '--video',
+            $mediaType->isStream() => '--stream',
+            default => '--image',
+        };
 
         $args = [
             $mediaFlag, $mediaPath,
@@ -57,6 +66,7 @@ class UltralyticsProvider implements ProviderContract
         OptionBuilder::appendBoolOption($options, $args, 'save', '--save');
         OptionBuilder::appendStringOption($options, $args, 'save_path', '--save-path');
         OptionBuilder::appendIntOption($options, $args, 'vid_stride', '--vid-stride');
+        OptionBuilder::appendIntOption($options, $args, 'max_frames', '--max-frames');
 
         return $args;
     }

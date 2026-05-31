@@ -26,4 +26,6 @@ interface ProviderContract
     ): array;
 
     public function supportsVideo(): bool;
+
+    public function supportsStream(): bool;
 }

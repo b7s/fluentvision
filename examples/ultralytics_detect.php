@@ -33,7 +33,7 @@ foreach ($images as $filename) {
         ->useUltralytics()
         ->model(YoloModel::YOLO26s)
         ->useCpu()
-        ->conf(0.4)
+        ->confidence(0.4)
         ->media($path)
         ->detect();
 

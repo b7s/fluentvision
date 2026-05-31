@@ -33,7 +33,7 @@ foreach ($images as $filename) {
         ->useNanodet()
         ->model(NanodetModel::PlusM416)
         ->useCpu()
-        ->conf(0.4)
+        ->confidence(0.4)
         ->media($path)
         ->detect();
 

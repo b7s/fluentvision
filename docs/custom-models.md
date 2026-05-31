@@ -16,7 +16,7 @@ use B7s\FluentVision\FluentVision;
 $result = FluentVision::make()
     ->model('/home/user/models/my-yolo-custom.pt')
     ->useCpu()
-    ->conf(0.4)
+    ->confidence(0.4)
     ->media('photo.jpg')
     ->detect();
 ```
@@ -29,7 +29,7 @@ Place your model in the configured model directory (default: `~/.fluentvision/mo
 $result = FluentVision::make()
     ->model('my-yolo-custom.pt')
     ->useCpu()
-    ->conf(0.4)
+    ->confidence(0.4)
     ->media('photo.jpg')
     ->detect();
 ```
@@ -63,7 +63,7 @@ $result = FluentVision::make()
         checkpointPath: '/home/user/models/my-nanodet.ckpt'
     )
     ->useCpu()
-    ->conf(0.35)
+    ->confidence(0.35)
     ->media('photo.jpg')
     ->detect();
 ```
@@ -157,7 +157,7 @@ When you pass a string to `model()`, FluentVision resolves it in this order:
 ```php
 $result = FluentVision::make()
     ->model('/data/models/yolo-screw-defects.pt')
-    ->conf(0.3)
+    ->confidence(0.3)
     ->media('production-line.jpg')
     ->detect();
 
@@ -187,7 +187,7 @@ $result = FluentVision::make()
         configPath: '/data/models/water-meter-detect.yml',
         checkpointPath: '/data/models/water-meter-detect.ckpt'
     )
-    ->conf(0.25)
+    ->confidence(0.25)
     ->imgsz(416)
     ->media('meter-reading.jpg')
     ->detect();

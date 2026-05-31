@@ -19,7 +19,7 @@ $result = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLO26s)
     ->useCpu()
-    ->conf(0.5)
+    ->confidence(0.5)
     ->media('photo.jpg')
     ->detect();
 
@@ -77,7 +77,7 @@ $result = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLOE26s)
     ->useCpu()
-    ->conf(0.25) // default: 0.4
+    ->confidence(0.25) // default: 0.4
     ->prompts(['person', 'yellow hard hat'])
     ->media('factory.jpg')
     ->detect();
@@ -102,7 +102,7 @@ $result = FluentVision::make()
     ->detect();
 ```
 
-![Modern workspace detection](docs/images/modern-workspace-with-laptop-coffee-plants.jpg)
+![Modern workspace detection](docs/medias/modern-workspace-with-laptop-coffee-plants.webp)
 
 ### Person + Cup
 
@@ -110,12 +110,12 @@ $result = FluentVision::make()
 $result = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLO26s)
-    ->conf(0.6)
+    ->confidence(0.6)
     ->media('woman-cup-coffe.jpg')
     ->detect();
 ```
 
-![Woman cup detection](docs/images/woman-cup-coffe.jpg)
+![Woman cup detection](docs/medias/woman-cup-coffe.webp)
 
 ### Street Scene with Segment
 
@@ -123,13 +123,31 @@ $result = FluentVision::make()
 $result = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLOE26mPF) // Segment with Prompt free
-    ->conf(0.8)
+    ->confidence(0.8)
     ->media('woman-bike-cars-trees-road-day.jpg')
     ->detect();
 // 9 detections: person (90.6%), bicycle (91.2%), 7x car
 ```
 
-![Street scene annotated](docs/images/woman-bike-cars-trees-road-day-annotated.jpg?_=1)
+![Street scene annotated](docs/medias/woman-bike-cars-trees-road-day-annotated.webp)
+
+### Video Detection — Street Traffic
+
+```php
+$result = FluentVision::make()
+    ->useUltralytics()
+    ->model(YoloModel::YOLO26s)
+    ->confidence(0.4)
+    ->everyNframes(10)
+    ->media('/path-to-video/people-crossing-cars.mp4')
+    ->detect();
+
+echo $result->getFrameCount() . " frames\n";
+echo $result->getTotalDetections() . " total detections\n";
+// 48 frames, 342 detections — person, car, bus, traffic light
+```
+
+![Street video scene annotated](docs/medias/people-crossing-cars.gif)
 
 ## Detection Result Array
 
@@ -172,20 +190,23 @@ use B7s\FluentVision\Enums\YoloTask;
 FluentVision::make()
     ->provider(Provider::Ultralytics) // or ->useUltralytics() / ->useNanodet()
     ->model(YoloModel::YOLO26s) // or ->model('yolo26s.pt') or ->model('/path/to/custom.pt')
-    ->media('/path/to/image.jpg')  // media type auto-detected from extension
+    ->media('/path/to/image.jpg') // media type auto-detected from extension
     // ->media('/path/to/clip.mp4') // video — auto-detected from extension
     ->useCpu() // or ->useGpu()
-    ->conf(0.5) // confidence threshold
+    ->confidence(0.5) // confidence threshold
     ->iou(0.45) // IoU threshold (NMS)
     ->imgsz(640) // inference image size
     ->maxDet(100) // max detections per image
- ->classes(['person', 'car']) // filter to specific classes
- ->prompts(['person wearing red', 'hard hat']) // YOLOE text prompts
- ->augment() // test-time augmentation
- ->half() // FP16 inference (GPU)
- ->withDetections() // include detection data (default: true)
- ->withAnnotation() // include annotated image (default: false)
- ->process(); // returns ProcessResult with both
+    ->classes(['person', 'car']) // filter to specific classes
+    ->prompts(['person wearing red', 'hard hat']) // YOLOE text prompts
+    ->augment() // test-time augmentation
+    ->half() // FP16 inference (GPU)
+    ->withDetections() // include detection data (default: true)
+    ->withAnnotation() // include annotated image (default: false)
+    ->process(); // returns ProcessResult with both
+    // ->stream('rtsp://camera/live', $callback) // real-time stream (Ultralytics only)
+    //    ->maxFrames(100)
+    //    ->startStream(); // returns StreamResult
 ```
 
 ### Image Detection
@@ -370,7 +391,8 @@ vendor/bin/fluentvision install --config=/path/to/config.php
 - [Usage Guide](docs/usage.md) — complete fluent API reference
 - [Providers](docs/providers.md) — Ultralytics vs NanoDet details
 - [Custom Models](docs/custom-models.md) — using your own trained models
-- [Result Objects](docs/results.md) — InferenceResult, ProcessResult, DetectionResult, BoundingBox API
+- [Result Objects](docs/results.md) — InferenceResult, ProcessResult, StreamResult, DetectionResult, BoundingBox API
+- [Real-Time Streaming](docs/realtime-streaming.md) — RTSP, RTMP, webcam frame-by-frame detection
 - [CLI Commands](docs/cli.md) — install, doctor, and options
 
 ## License

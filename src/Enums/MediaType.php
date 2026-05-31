@@ -8,6 +8,7 @@ use const PATHINFO_EXTENSION;
 
 use function in_array;
 use function pathinfo;
+use function str_starts_with;
 
 enum MediaType: string
 {
@@ -15,12 +16,14 @@ enum MediaType: string
 
     case Image = 'image';
     case Video = 'video';
+    case Stream = 'stream';
 
     public function label(): string
     {
         return match ($this) {
             self::Image => 'Image',
             self::Video => 'Video',
+            self::Stream => 'Stream',
         };
     }
 
@@ -34,8 +37,17 @@ enum MediaType: string
         return $this === self::Video;
     }
 
+    public function isStream(): bool
+    {
+        return $this === self::Stream;
+    }
+
     public static function inferFromPath(string $path): self
     {
+        if (self::isStreamSource($path)) {
+            return self::Stream;
+        }
+
         $ext = pathinfo($path, PATHINFO_EXTENSION);
 
         if (in_array($ext, self::videoExtensions(), true)) {
@@ -43,6 +55,18 @@ enum MediaType: string
         }
 
         return self::Image;
+    }
+
+    public static function isStreamSource(string $source): bool
+    {
+        return $source === '0'
+        || str_starts_with($source, 'rtsp://')
+        || str_starts_with($source, 'rtmp://')
+        || str_starts_with($source, 'tcp://')
+        || str_starts_with($source, 'udp://')
+        || str_starts_with($source, 'http://')
+        || str_starts_with($source, 'https://')
+        || preg_match('/^\d+$/', $source) === 1;
     }
 
     /**
