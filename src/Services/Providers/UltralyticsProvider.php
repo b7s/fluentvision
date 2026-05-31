@@ -67,6 +67,9 @@ class UltralyticsProvider implements ProviderContract
         OptionBuilder::appendStringOption($options, $args, 'save_path', '--save-path');
         OptionBuilder::appendIntOption($options, $args, 'vid_stride', '--vid-stride');
         OptionBuilder::appendIntOption($options, $args, 'max_frames', '--max-frames');
+        OptionBuilder::appendBoolOption($options, $args, 'annotate', '--annotate');
+        OptionBuilder::appendBoolOption($options, $args, 'annotate_frames', '--annotate-frames');
+        OptionBuilder::appendIntOption($options, $args, 'annotate_port', '--mjpeg-port');
 
         return $args;
     }

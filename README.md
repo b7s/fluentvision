@@ -204,9 +204,9 @@ FluentVision::make()
     ->withDetections() // include detection data (default: true)
     ->withAnnotation() // include annotated image (default: false)
     ->process(); // returns ProcessResult with both
-    // ->stream('rtsp://camera/live', $callback) // real-time stream (Ultralytics only)
-    //    ->maxFrames(100)
-    //    ->startStream(); // returns StreamResult
+    // ->media('rtsp://camera/live')
+    // ->streamConfig(function ($frame, $num, $result) { ... }, null, 100) // real-time stream (Ultralytics only)
+    // ->process(); // returns StreamResult
 ```
 
 ### Image Detection

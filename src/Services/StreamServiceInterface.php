@@ -13,7 +13,7 @@ interface StreamServiceInterface
 {
     /**
      * @param  array<string, mixed>  $options
-     * @param  callable(InferenceResult $frame, int $frameNumber): void  $onFrame
+     * @param  callable(InferenceResult $frame, int $frameNumber, StreamResult $result): void  $onFrame
      */
     public function stream(
         Provider $providerType,

@@ -195,45 +195,65 @@ describe('FluentVision', function () {
 
     it('sets stream source and callback fluently', function () {
         $fv = FluentVision::make();
-        $result = $fv->stream('rtsp://example.com/live', static fn () => null);
+        $result = $fv->media('rtsp://example.com/live')
+            ->streamConfig(static fn () => null);
 
         expect($result)->toBeInstanceOf(FluentVision::class)
             ->and($fv->getMediaType())->toBe(MediaType::Stream);
     });
 
-    it('sets maxFrames fluently', function () {
-        $fv = FluentVision::make();
-        $result = $fv->maxFrames(100);
-
-        expect($result)->toBeInstanceOf(FluentVision::class);
-    });
-
-    it('throws when startStream called without stream source', function () {
-        $fv = FluentVision::make();
-
-        expect(fn () => $fv->startStream())->toThrow(RuntimeException::class);
-    });
-
-    it('throws when startStream called without callback', function () {
-        $fv = FluentVision::make();
-        $fv->stream('rtsp://test', static fn () => null);
-        $reflection = new ReflectionClass($fv);
-        $prop = $reflection->getProperty('streamCallback');
-        $prop->setAccessible(true);
-        $prop->setValue($fv, null);
-
-        expect(fn () => $fv->startStream())->toThrow(RuntimeException::class);
-    });
-
-    it('delegates startStream to StreamServiceInterface', function () {
+    it('passes maxFramesToProcess option via streamConfig', function () {
         $expectedResult = new StreamResult(
             source: 'rtsp://test',
             provider: 'ultralytics',
             model: 'yolo26s.pt',
-            frames: [],
-            totalTime: 1.0,
-            stopped: true,
         );
+        $expectedResult->setTotalTime(1.0);
+
+        $inferenceService = Mockery::mock(InferenceServiceInterface::class);
+        $modelService = Mockery::mock(ModelServiceInterface::class);
+        $modelService->shouldReceive('resolveUltralyticsModel')->andReturn('/home/user/.fluentvision/models/yolo26s.pt');
+
+        $streamService = Mockery::mock(StreamServiceInterface::class);
+        $streamService->shouldReceive('stream')
+            ->once()
+            ->withArgs(function (Provider $p, string $src, string $m, Device $d, callable $cb, array $opts) {
+                return isset($opts['max_frames']) && $opts['max_frames'] === 100;
+            })
+            ->andReturn($expectedResult);
+
+        $fv = new FluentVision(
+            inferenceService: $inferenceService,
+            modelService: $modelService,
+            streamService: $streamService,
+        );
+
+        $result = $fv->media('rtsp://test')
+            ->model(YoloModel::YOLO26s)
+            ->useCpu()
+            ->streamConfig(static fn () => null, null, 100)
+            ->process();
+
+        expect($result)->toBe($expectedResult);
+
+        Mockery::close();
+    });
+
+    it('throws when process called on stream without callback', function () {
+        $fv = FluentVision::make();
+        $fv->media('rtsp://test');
+
+        expect(fn () => $fv->process())->toThrow(RuntimeException::class);
+    });
+
+    it('delegates stream to StreamServiceInterface via process', function () {
+        $expectedResult = new StreamResult(
+            source: 'rtsp://test',
+            provider: 'ultralytics',
+            model: 'yolo26s.pt',
+        );
+        $expectedResult->setStopped(true);
+        $expectedResult->setTotalTime(1.0);
 
         $inferenceService = Mockery::mock(InferenceServiceInterface::class);
         $modelService = Mockery::mock(ModelServiceInterface::class);
@@ -253,14 +273,139 @@ describe('FluentVision', function () {
             streamService: $streamService,
         );
 
-        $result = $fv->stream('rtsp://test', static fn () => null)
+        $result = $fv->media('rtsp://test')
             ->model(YoloModel::YOLO26s)
             ->useCpu()
-            ->startStream();
+            ->streamConfig(static fn () => null)
+            ->process();
 
         expect($result)->toBe($expectedResult)
             ->and($result->source)->toBe('rtsp://test')
-            ->and($result->stopped)->toBeTrue();
+            ->and($result->isStopped())->toBeTrue();
+
+        Mockery::close();
+    });
+
+    it('sets annotateStream fluently and enables annotation', function () {
+        $fv = FluentVision::make();
+        $result = $fv->annotateStream(8765);
+
+        expect($result)->toBeInstanceOf(FluentVision::class);
+    });
+
+    it('passes annotate option in process when withAnnotation enabled', function () {
+        $expectedResult = new StreamResult(
+            source: 'rtsp://test',
+            provider: 'ultralytics',
+            model: 'yolo26s.pt',
+        );
+        $expectedResult->setTotalTime(1.0);
+
+        $inferenceService = Mockery::mock(InferenceServiceInterface::class);
+        $modelService = Mockery::mock(ModelServiceInterface::class);
+        $modelService->shouldReceive('resolveUltralyticsModel')->andReturn('/home/user/.fluentvision/models/yolo26s.pt');
+
+        $streamService = Mockery::mock(StreamServiceInterface::class);
+        $streamService->shouldReceive('stream')
+            ->once()
+            ->withArgs(function (Provider $p, string $src, string $m, Device $d, callable $cb, array $opts) {
+                return isset($opts['annotate']) && $opts['annotate'] === true
+                    && isset($opts['annotate_port']) && $opts['annotate_port'] === 8765;
+            })
+            ->andReturn($expectedResult);
+
+        $fv = new FluentVision(
+            inferenceService: $inferenceService,
+            modelService: $modelService,
+            streamService: $streamService,
+        );
+
+        $result = $fv->media('rtsp://test')
+            ->model(YoloModel::YOLO26s)
+            ->useCpu()
+            ->withAnnotation(true)
+            ->annotateStream(8765)
+            ->streamConfig(static fn () => null)
+            ->process();
+
+        expect($result)->toBe($expectedResult);
+
+        Mockery::close();
+    });
+
+    it('passes annotate option without port in process', function () {
+        $expectedResult = new StreamResult(
+            source: 'rtsp://test',
+            provider: 'ultralytics',
+            model: 'yolo26s.pt',
+        );
+        $expectedResult->setTotalTime(1.0);
+
+        $inferenceService = Mockery::mock(InferenceServiceInterface::class);
+        $modelService = Mockery::mock(ModelServiceInterface::class);
+        $modelService->shouldReceive('resolveUltralyticsModel')->andReturn('/home/user/.fluentvision/models/yolo26s.pt');
+
+        $streamService = Mockery::mock(StreamServiceInterface::class);
+        $streamService->shouldReceive('stream')
+            ->once()
+            ->withArgs(function (Provider $p, string $src, string $m, Device $d, callable $cb, array $opts) {
+                return isset($opts['annotate']) && $opts['annotate'] === true
+                    && ! isset($opts['annotate_port']);
+            })
+            ->andReturn($expectedResult);
+
+        $fv = new FluentVision(
+            inferenceService: $inferenceService,
+            modelService: $modelService,
+            streamService: $streamService,
+        );
+
+        $result = $fv->media('rtsp://test')
+            ->model(YoloModel::YOLO26s)
+            ->useCpu()
+            ->withAnnotation(true)
+            ->streamConfig(static fn () => null)
+            ->process();
+
+        expect($result)->toBe($expectedResult);
+
+        Mockery::close();
+    });
+
+    it('streamConfig with port enables annotation', function () {
+        $expectedResult = new StreamResult(
+            source: 'rtsp://test',
+            provider: 'ultralytics',
+            model: 'yolo26s.pt',
+        );
+        $expectedResult->setTotalTime(1.0);
+
+        $inferenceService = Mockery::mock(InferenceServiceInterface::class);
+        $modelService = Mockery::mock(ModelServiceInterface::class);
+        $modelService->shouldReceive('resolveUltralyticsModel')->andReturn('/home/user/.fluentvision/models/yolo26s.pt');
+
+        $streamService = Mockery::mock(StreamServiceInterface::class);
+        $streamService->shouldReceive('stream')
+            ->once()
+            ->withArgs(function (Provider $p, string $src, string $m, Device $d, callable $cb, array $opts) {
+                return isset($opts['annotate']) && $opts['annotate'] === true
+                    && isset($opts['annotate_port']) && $opts['annotate_port'] === 9000;
+            })
+            ->andReturn($expectedResult);
+
+        $fv = new FluentVision(
+            inferenceService: $inferenceService,
+            modelService: $modelService,
+            streamService: $streamService,
+        );
+
+        $result = $fv->media('rtsp://test')
+            ->model(YoloModel::YOLO26s)
+            ->useCpu()
+            ->streamConfig(static fn () => null, 9000)
+            ->process();
+
+        expect($result)->toBe($expectedResult);
 
         Mockery::close();
     });

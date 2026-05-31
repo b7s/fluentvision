@@ -20,14 +20,13 @@ use function array_merge;
 use function explode;
 use function is_array;
 use function is_bool;
-use function is_float;
-use function is_int;
 use function is_string;
 use function json_decode;
 use function microtime;
 use function sprintf;
 use function str_contains;
 use function trim;
+use function usleep;
 
 class StreamService implements StreamServiceInterface
 {
@@ -38,7 +37,7 @@ class StreamService implements StreamServiceInterface
 
     /**
      * @param  array<string, mixed>  $options
-     * @param  callable(InferenceResult $frame, int $frameNumber): void  $onFrame
+     * @param  callable(InferenceResult $frame, int $frameNumber, StreamResult $result): void  $onFrame
      *
      * @throws InferenceException
      */
@@ -66,11 +65,25 @@ class StreamService implements StreamServiceInterface
         $process->setTimeout(null);
         $process->start();
 
-        $frames = [];
-        $start = microtime(true);
+        $result = new StreamResult(
+            source: $source,
+            provider: $provider->name(),
+            model: $model,
+        );
 
+        $result->setRunning(true);
+        $result->setKillCallback(static function () use ($process): void {
+            if ($process->isRunning()) {
+                $process->stop(0, SIGKILL);
+            }
+        });
+
+        $startTime = microtime(true);
         $buffer = '';
-        while ($process->isRunning()) {
+        $streamUrl = null;
+        $frameIndex = 0;
+
+        while ($process->isRunning() && ! $result->isStopRequested()) {
             $incremental = $process->getIncrementalOutput();
             if ($incremental !== '') {
                 $buffer .= $incremental;
@@ -87,12 +100,30 @@ class StreamService implements StreamServiceInterface
 
                 $parsed = $this->parseFrameLine($line, $provider->name());
                 if ($parsed !== null) {
-                    $frames[] = $parsed;
-                    $onFrame($parsed, count($frames));
+                    $frameIndex++;
+                    $result->addFrame($parsed);
+                    $onFrame($parsed, $frameIndex, $result);
+
+                    if ($streamUrl === null && $parsed->annotatedFrame !== null) {
+                        $raw = json_decode($line, true);
+                        if (is_array($raw) && isset($raw['stream_url']) && is_string($raw['stream_url'])) {
+                            $streamUrl = $raw['stream_url'];
+                            $result->setStreamUrl($streamUrl);
+                        }
+                    }
                 }
             }
 
             usleep(10000);
+        }
+
+        if ($result->isStopRequested() && $process->isRunning()) {
+            $process->stop(0, SIGKILL);
+            $result->setStopped(true);
+            $result->setRunning(false);
+            $result->setTotalTime(round(microtime(true) - $startTime, 4));
+
+            return $result;
         }
 
         $remaining = trim($process->getOutput());
@@ -111,15 +142,27 @@ class StreamService implements StreamServiceInterface
 
             $parsed = $this->parseFrameLine($line, $provider->name());
             if ($parsed !== null) {
-                $frames[] = $parsed;
-                $onFrame($parsed, count($frames));
+                $frameIndex++;
+                $result->addFrame($parsed);
+                $onFrame($parsed, $frameIndex, $result);
+
+                if ($streamUrl === null && $parsed->annotatedFrame !== null) {
+                    $raw = json_decode($line, true);
+                    if (is_array($raw) && isset($raw['stream_url']) && is_string($raw['stream_url'])) {
+                        $streamUrl = $raw['stream_url'];
+                        $result->setStreamUrl($streamUrl);
+                    }
+                }
             }
         }
 
         $lastLine = trim($buffer);
-        $summary = null;
         if ($lastLine !== '') {
             $summary = $this->parseSummaryLine($lastLine);
+            if ($summary !== null) {
+                $stopped = $summary['stopped'] ?? false;
+                $result->setStopped(is_bool($stopped) ? $stopped : false);
+            }
         }
 
         if (! $process->isSuccessful()) {
@@ -129,18 +172,10 @@ class StreamService implements StreamServiceInterface
             );
         }
 
-        $totalTime = microtime(true) - $start;
-        $modelName = $summary['model'] ?? $model;
-        $stopped = $summary['stopped'] ?? false;
+        $result->setTotalTime(round(microtime(true) - $startTime, 4));
+        $result->setRunning(false);
 
-        return new StreamResult(
-            source: $source,
-            provider: $provider->name(),
-            model: is_string($modelName) ? $modelName : $model,
-            frames: $frames,
-            totalTime: round($totalTime, 4),
-            stopped: is_bool($stopped) ? $stopped : false,
-        );
+        return $result;
     }
 
     private function parseFrameLine(string $line, string $providerName): ?InferenceResult
@@ -161,12 +196,14 @@ class StreamService implements StreamServiceInterface
         $imagePath = $data['image_path'] ?? '';
         $model = $data['model'] ?? '';
         $inferenceTime = $data['inference_time'] ?? 0;
+        $annotatedFrame = $data['annotated_frame'] ?? null;
 
         return InferenceResult::fromArray([
             'image_path' => is_string($imagePath) ? $imagePath : '',
             'provider' => $providerName,
             'model' => is_string($model) ? $model : '',
             'inference_time' => is_float($inferenceTime) || is_int($inferenceTime) ? $inferenceTime : 0,
+            'annotated_frame' => is_string($annotatedFrame) ? $annotatedFrame : null,
         ], $detections);
     }
 

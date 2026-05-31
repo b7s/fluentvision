@@ -85,11 +85,13 @@ class FluentVision
 
     private bool $wantsAnnotation = false;
 
-    private string $streamSource = '';
+    private bool $wantsAnnotatedFrames = false;
 
-    private int $maxFrames = 0;
+    private int $maxFramesToProcess = 0;
 
-    /** @var callable(InferenceResult, int): void|null */
+    private ?int $annotatePort = null;
+
+    /** @var (callable(InferenceResult, int, StreamResult): void)|null */
     private $streamCallback = null;
 
     private InferenceServiceInterface $inferenceService;
@@ -337,26 +339,50 @@ class FluentVision
         return $this;
     }
 
-    /**
-     * Set a real-time stream source for frame-by-frame detection.
-     *
-     * Accepts RTSP, RTMP, TCP, UDP, HTTP/HTTPS URLs, or a webcam index (e.g. "0").
-     * The callback receives an InferenceResult for each frame.
-     *
-     * @param  callable(InferenceResult $frame, int $frameNumber): void  $onFrame
-     */
-    public function stream(string $source, callable $onFrame): self
+    public function withAnnotatedFrames(bool $enabled = true): self
     {
-        $this->streamSource = $source;
-        $this->streamCallback = $onFrame;
-        $this->mediaType = MediaType::Stream;
+        $this->wantsAnnotatedFrames = $enabled;
 
         return $this;
     }
 
-    public function maxFrames(int $maxFrames): self
+    /**
+     * Configure the per-frame callback, optional annotation server port, and frame limit for streaming.
+     *
+     * The callback receives (InferenceResult $frame, int $frameNumber, StreamResult $result).
+     * Call $result->stopStream() from inside the callback to stop the stream early.
+     * When startAnnotateServerOnPort is set, an MJPEG HTTP server is started on that port
+     * and withAnnotation(true) is implied.
+     *
+     * @param  callable(InferenceResult $frame, int $frameNumber, StreamResult $result): void  $onFrame
+     */
+    public function streamConfig(callable $onFrame, ?int $startAnnotateServerOnPort = null, int $maxFramesToProcess = 0): self
     {
-        $this->maxFrames = $maxFrames;
+        $this->streamCallback = $onFrame;
+        $this->maxFramesToProcess = $maxFramesToProcess;
+
+        if ($startAnnotateServerOnPort !== null) {
+            $this->annotatePort = $startAnnotateServerOnPort;
+            $this->wantsAnnotation = true;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Start an MJPEG HTTP server on the given port for live annotated frame viewing.
+     * Implies withAnnotation(true). Pass null to disable.
+     *
+     * Open http://localhost:{port}/stream in any browser to view the annotated stream.
+     * Alias for passing the port via streamConfig(callable, $port).
+     */
+    public function annotateStream(?int $port): self
+    {
+        $this->annotatePort = $port;
+
+        if ($port !== null) {
+            $this->wantsAnnotation = true;
+        }
 
         return $this;
     }
@@ -414,10 +440,16 @@ class FluentVision
     /**
      * @throws JsonException
      */
-    public function process(): ProcessResult
+    public function process(): ProcessResult|StreamResult
     {
         if ($this->mediaPath === '') {
             throw new RuntimeException('No media path set. Call media() before process().');
+        }
+
+        $mediaType = $this->resolveMediaType();
+
+        if ($mediaType->isStream()) {
+            return $this->runStream();
         }
 
         if (! $this->wantsDetections && ! $this->wantsAnnotation) {
@@ -436,21 +468,17 @@ class FluentVision
         return $this->inferenceService->detectAndAnnotate(
             providerType: $this->provider,
             mediaPath: $this->mediaPath,
-            mediaType: $this->resolveMediaType(),
+            mediaType: $mediaType,
             model: $resolvedModel,
             device: $this->device,
             options: $options,
         );
     }
 
-    public function startStream(): StreamResult
+    private function runStream(): StreamResult
     {
-        if ($this->streamSource === '') {
-            throw new RuntimeException('No stream source set. Call stream() before startStream().');
-        }
-
         if ($this->streamCallback === null) {
-            throw new RuntimeException('No stream callback set. Call stream(source, callback) before startStream().');
+            throw new RuntimeException('No stream callback set. Call streamConfig(callback) before process().');
         }
 
         $onFrame = $this->streamCallback;
@@ -465,13 +493,25 @@ class FluentVision
         $resolvedModel = $this->resolveModel();
         $options = $this->buildOptions();
 
-        if ($this->maxFrames > 0) {
-            $options['max_frames'] = $this->maxFrames;
+        if ($this->maxFramesToProcess > 0) {
+            $options['max_frames'] = $this->maxFramesToProcess;
+        }
+
+        if ($this->wantsAnnotatedFrames) {
+            $options['annotate_frames'] = true;
+        }
+
+        if ($this->wantsAnnotation || $this->annotatePort !== null) {
+            $options['annotate'] = true;
+        }
+
+        if ($this->annotatePort !== null) {
+            $options['annotate_port'] = $this->annotatePort;
         }
 
         return $this->streamService->stream(
             providerType: $this->provider,
-            source: $this->streamSource,
+            source: $this->mediaPath,
             model: $resolvedModel,
             device: $this->device,
             onFrame: $onFrame,

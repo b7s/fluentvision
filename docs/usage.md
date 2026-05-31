@@ -136,9 +136,10 @@ $vision->everyNframes(5) // Process every 5th frame
 
 | Method | Type | Default | Description |
 |--------|------|---------|-------------|
-| `stream(string $source, callable $onFrame)` | string, callable | — | Set stream source (RTSP, RTMP, HTTP, webcam) and per-frame callback |
-| `maxFrames(int $maxFrames)` | int | 0 | Limit frames to process (0 = unlimited) |
-| `startStream()` | — | — | **Terminal method** — start stream, returns `StreamResult` |
+| `media(string $source, ?MediaType $type = null)` | string, ?MediaType | — | Set stream source (RTSP, RTMP, HTTP, webcam) — type auto-detected |
+| `streamConfig(callable $onFrame, ?int $startAnnotateServerOnPort = null, int $maxFramesToProcess = 0)` | callable, ?int, int | —, null, 0 | Set per-frame callback + optional annotation server port + frame limit |
+| `annotateStream(?int $port)` | ?int | — | Fluent alias to enable annotation streaming |
+| `withAnnotatedFrames(bool $enabled = true)` | bool | false | Include base64 annotated frame data in each stream InferenceResult |
 
 ```php
 use B7s\FluentVision\Enums\YoloModel;
@@ -147,11 +148,11 @@ $result = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLO26s)
     ->confidence(0.5)
-    ->stream('rtsp://192.168.1.100:554/live', function ($frame, $frameNumber) {
+    ->media('rtsp://192.168.1.100:554/live')
+    ->streamConfig(function ($frame, $frameNumber, $result) {
         echo sprintf("Frame %d: %d detections\n", $frameNumber, $frame->getDetectionCount());
-    })
-    ->maxFrames(100)
-    ->startStream();
+    }, null, 100)
+    ->process();
 
 echo "Processed {$result->getFrameCount()} frames\n";
 echo "Total detections: {$result->getTotalDetections()}\n";
@@ -182,8 +183,7 @@ $vision->media('data.raw', MediaType::Image);
 |--------|---------|-------------|
 | `detect()` | `InferenceResult \| VideoInferenceResult` | Run detection on image or video |
 | `annotate()` | `AnnotatedResult` | Run detection and save annotated output |
-| `process()` | `ProcessResult` | Run detection + annotation in a single call |
-| `startStream()` | `StreamResult` | Start real-time stream detection (after `stream()`) |
+| `process()` | `ProcessResult \| StreamResult` | Run detection + annotation in a single call, or stream when media is a stream source |
 
 ### Process Flags
 
@@ -354,7 +354,7 @@ $vision->getConfig();    // Config object
 
 ## Method Chaining
 
-All setter methods return `self` for fluent chaining. Only the terminal methods (`detect()`, `annotate()`, `process()`, `startStream()`) return result objects and break the chain.
+All setter methods return `self` for fluent chaining. Only the terminal methods (`detect()`, `annotate()`, `process()`) return result objects and break the chain. `process()` returns `ProcessResult` for images/videos or `StreamResult` for streams.
 
 ```php
 // Build up configuration

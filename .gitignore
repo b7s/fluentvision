@@ -16,3 +16,4 @@ composer.lock
 /*.ts
 logs.txt
 /runs/
+/fluentvision-output

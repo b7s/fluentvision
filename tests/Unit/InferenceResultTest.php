@@ -117,7 +117,98 @@ describe('InferenceResult', function () {
             'inference_time' => 0.1,
         ], []);
 
-        expect($result->imagePath)->toBe('/tmp/test.jpg');
-        expect($result->getDetectionCount())->toBe(0);
+        expect($result->imagePath)->toBe('/tmp/test.jpg')
+            ->and($result->getDetectionCount())->toBe(0);
+    });
+
+    it('creates with annotated frame', function () {
+        $result = new InferenceResult(
+            imagePath: '/tmp/test.jpg',
+            provider: 'ultralytics',
+            model: 'yolo26s.pt',
+            detections: [],
+            inferenceTime: 0.1,
+            annotatedFrame: 'base64jpegdata',
+        );
+
+        expect($result->hasAnnotatedFrame())->toBeTrue()
+            ->and($result->getAnnotatedFrame())->toBe('base64jpegdata');
+    });
+
+    it('annotated frame defaults to null', function () {
+        $result = new InferenceResult(
+            imagePath: '/tmp/test.jpg',
+            provider: 'ultralytics',
+            model: 'yolo26s.pt',
+            detections: [],
+            inferenceTime: 0.1,
+        );
+
+        expect($result->hasAnnotatedFrame())->toBeFalse()
+            ->and($result->getAnnotatedFrame())->toBeNull();
+    });
+
+    it('creates from array with annotated frame', function () {
+        $result = InferenceResult::fromArray([
+            'image_path' => '/tmp/test.jpg',
+            'provider' => 'ultralytics',
+            'model' => 'yolo26s.pt',
+            'inference_time' => 0.1,
+            'annotated_frame' => 'base64data',
+        ], []);
+
+        expect($result->hasAnnotatedFrame())->toBeTrue()
+            ->and($result->getAnnotatedFrame())->toBe('base64data');
+    });
+
+    it('includes annotated frame in toArray when present', function () {
+        $result = new InferenceResult(
+            imagePath: '/tmp/test.jpg',
+            provider: 'ultralytics',
+            model: 'yolo26s.pt',
+            detections: [],
+            inferenceTime: 0.1,
+            annotatedFrame: 'base64data',
+        );
+
+        $array = $result->toArray();
+
+        expect($array)->toHaveKey('annotated_frame')
+            ->and($array['annotated_frame'])->toBe('base64data');
+    });
+
+    it('omits annotated frame from toArray when null', function () {
+        $result = new InferenceResult(
+            imagePath: '/tmp/test.jpg',
+            provider: 'ultralytics',
+            model: 'yolo26s.pt',
+            detections: [],
+            inferenceTime: 0.1,
+        );
+
+        $array = $result->toArray();
+
+        expect($array)->not->toHaveKey('annotated_frame');
+    });
+
+    it('preserves annotated frame in filterByClass', function () {
+        $detections = [
+            new DetectionResult(class: 'person', confidence: 0.9, box: new BoundingBox(x1: 0, y1: 0, x2: 1, y2: 1)),
+            new DetectionResult(class: 'car', confidence: 0.8, box: new BoundingBox(x1: 0, y1: 0, x2: 1, y2: 1)),
+        ];
+
+        $result = new InferenceResult(
+            imagePath: '/tmp/test.jpg',
+            provider: 'ultralytics',
+            model: 'yolo26s.pt',
+            detections: $detections,
+            inferenceTime: 0.1,
+            annotatedFrame: 'base64data',
+        );
+
+        $filtered = $result->filterByClass('person');
+
+        expect($filtered->hasAnnotatedFrame())->toBeTrue()
+            ->and($filtered->getAnnotatedFrame())->toBe('base64data');
     });
 });

@@ -8,6 +8,7 @@ readonly class InferenceResult
 {
     /**
      * @param  array<DetectionResult>  $detections
+     * @param  ?string  $annotatedFrame  Base64-encoded JPEG of annotated frame (streaming only)
      */
     public function __construct(
         public string $imagePath,
@@ -15,11 +16,22 @@ readonly class InferenceResult
         public string $model,
         public array $detections,
         public float $inferenceTime,
+        public ?string $annotatedFrame = null,
     ) {}
 
     public function getDetectionCount(): int
     {
         return count($this->detections);
+    }
+
+    public function hasAnnotatedFrame(): bool
+    {
+        return $this->annotatedFrame !== null;
+    }
+
+    public function getAnnotatedFrame(): ?string
+    {
+        return $this->annotatedFrame;
     }
 
     public function isEmpty(): bool
@@ -58,6 +70,7 @@ readonly class InferenceResult
             model: $this->model,
             detections: array_values($filtered),
             inferenceTime: $this->inferenceTime,
+            annotatedFrame: $this->annotatedFrame,
         );
     }
 
@@ -74,6 +87,7 @@ readonly class InferenceResult
             model: $this->model,
             detections: array_values($filtered),
             inferenceTime: $this->inferenceTime,
+            annotatedFrame: $this->annotatedFrame,
         );
     }
 
@@ -82,7 +96,7 @@ readonly class InferenceResult
      */
     public function toArray(): array
     {
-        return [
+        $array = [
             'image_path' => $this->imagePath,
             'provider' => $this->provider,
             'model' => $this->model,
@@ -93,6 +107,12 @@ readonly class InferenceResult
                 $this->detections,
             ),
         ];
+
+        if ($this->annotatedFrame !== null) {
+            $array['annotated_frame'] = $this->annotatedFrame;
+        }
+
+        return $array;
     }
 
     /**
@@ -105,6 +125,7 @@ readonly class InferenceResult
         $provider = $data['provider'] ?? '';
         $model = $data['model'] ?? '';
         $inferenceTime = $data['inference_time'] ?? 0;
+        $annotatedFrame = $data['annotated_frame'] ?? null;
 
         return new self(
             imagePath: is_string($imagePath) ? $imagePath : '',
@@ -112,6 +133,7 @@ readonly class InferenceResult
             model: is_string($model) ? $model : '',
             detections: $detections,
             inferenceTime: is_float($inferenceTime) || is_int($inferenceTime) ? (float) $inferenceTime : 0.0,
+            annotatedFrame: is_string($annotatedFrame) ? $annotatedFrame : null,
         );
     }
 }

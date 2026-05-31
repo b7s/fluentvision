@@ -2,10 +2,15 @@
 """Ultralytics YOLO26/YOLOE inference script for FluentVision."""
 
 import argparse
+import base64
 import json
 import sys
+import threading
 import time
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
+
+import cv2
 
 
 def parse_args():
@@ -14,6 +19,9 @@ def parse_args():
     parser.add_argument("--video", type=str, help="Path to input video")
     parser.add_argument("--stream", type=str, help="Stream source (rtsp://, rtmp://, tcp://, webcam index)")
     parser.add_argument("--max-frames", type=int, default=0, help="Max frames for streaming (0 = unlimited)")
+    parser.add_argument("--annotate", action="store_true", help="Enable annotation (required for MJPEG server or base64 output)")
+    parser.add_argument("--annotate-frames", action="store_true", help="Include base64-encoded annotated frame in stream NDJSON output")
+    parser.add_argument("--mjpeg-port", type=int, default=0, help="Start MJPEG HTTP server on this port (0 = disabled)")
     parser.add_argument("--model", type=str, default="yolo26s.pt", help="Model filename")
     parser.add_argument("--task", type=str, default="detect", help="Task type")
     parser.add_argument("--device", type=str, default="cpu", help="Device (cpu or 0)")
@@ -31,6 +39,68 @@ def parse_args():
     parser.add_argument("--save-path", type=str, default=None, help="Directory to save annotated output")
     parser.add_argument("--prompts", type=str, default=None, help="Comma-separated text prompts for YOLOE open-vocabulary detection")
     return parser.parse_args()
+
+
+def encode_frame_b64(annotated_img):
+    _, buf = cv2.imencode(".jpg", annotated_img, [cv2.IMWRITE_JPEG_QUALITY, 80])
+    return base64.b64encode(buf.tobytes()).decode("utf-8")
+
+
+class MjpegHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path not in ("/", "/stream", "/mjpeg"):
+            self.send_response(404)
+            self.end_headers()
+            return
+
+        self.send_response(200)
+        self.send_header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+
+        while True:
+            with mjpeg_lock:
+                if mjpeg_frame is None:
+                    time.sleep(0.01)
+                    continue
+                frame_bytes = mjpeg_frame
+
+            try:
+                self.wfile.write(b"--frame\r\n")
+                self.wfile.write(b"Content-Type: image/jpeg\r\n")
+                self.wfile.write(f"Content-Length: {len(frame_bytes)}\r\n\r\n".encode())
+                self.wfile.write(frame_bytes)
+                self.wfile.write(b"\r\n")
+                self.wfile.flush()
+            except BrokenPipeError:
+                break
+            except Exception:
+                break
+
+            time.sleep(0.01)
+
+    def log_message(self, format, *args):
+        pass
+
+
+mjpeg_frame = None
+mjpeg_lock = threading.Lock()
+
+
+def start_mjpeg_server(port):
+    server = HTTPServer(("0.0.0.0", port), MjpegHandler)
+    server.daemon_threads = True
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    return server
+
+
+def update_mjpeg_frame(annotated_img):
+    global mjpeg_frame
+    _, buf = cv2.imencode(".jpg", annotated_img, [cv2.IMWRITE_JPEG_QUALITY, 80])
+    with mjpeg_lock:
+        mjpeg_frame = buf.tobytes()
 
 
 def is_yoloe_model(model):
@@ -165,6 +235,10 @@ def run_video_inference(model, args):
 
 
 def run_stream_inference(model, args, real_stdout):
+    mjpeg_server = None
+    if args.mjpeg_port > 0:
+        mjpeg_server = start_mjpeg_server(args.mjpeg_port)
+
     predict_kwargs = {
         "source": args.stream,
         "conf": args.conf,
@@ -207,6 +281,15 @@ def run_stream_inference(model, args, real_stdout):
         frame_count += 1
         total_detections += len(detections)
 
+        annotated_b64 = None
+        needs_render = args.annotate_frames or args.mjpeg_port > 0
+        if needs_render:
+            annotated_img = result.plot()
+            if args.annotate_frames:
+                annotated_b64 = encode_frame_b64(annotated_img)
+            if args.mjpeg_port > 0:
+                update_mjpeg_frame(annotated_img)
+
         frame_output = {
             "frame": frame_count,
             "source": str(args.stream),
@@ -218,6 +301,12 @@ def run_stream_inference(model, args, real_stdout):
             "inference_time": 0,
             "type": "frame",
         }
+
+        if annotated_b64 is not None:
+            frame_output["annotated_frame"] = annotated_b64
+
+        if args.mjpeg_port > 0 and frame_count == 1:
+            frame_output["stream_url"] = f"http://localhost:{args.mjpeg_port}/stream"
 
         sys.stdout = real_stdout
         print(json.dumps(frame_output), flush=True)
@@ -238,6 +327,9 @@ def run_stream_inference(model, args, real_stdout):
         "stopped": args.max_frames > 0,
         "type": "summary",
     }
+
+    if mjpeg_server is not None:
+        mjpeg_server.shutdown()
 
     return summary_output
 

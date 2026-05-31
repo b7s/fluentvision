@@ -8,42 +8,37 @@ use B7s\FluentVision\Results\StreamResult;
 use B7s\FluentVision\Support\BoundingBox;
 
 describe('StreamResult', function () {
-    it('creates with all properties', function () {
-        $frames = [
-            new InferenceResult(imagePath: 'rtsp://stream', provider: 'ultralytics', model: 'yolo26s.pt', detections: [], inferenceTime: 0.05),
-            new InferenceResult(imagePath: 'rtsp://stream', provider: 'ultralytics', model: 'yolo26s.pt', detections: [], inferenceTime: 0.06),
-        ];
-
+    it('creates with required properties', function () {
         $result = new StreamResult(
             source: 'rtsp://example.com/stream',
             provider: 'ultralytics',
             model: 'yolo26s.pt',
-            frames: $frames,
-            totalTime: 1.234,
-            stopped: true,
         );
 
         expect($result->source)->toBe('rtsp://example.com/stream')
             ->and($result->provider)->toBe('ultralytics')
             ->and($result->model)->toBe('yolo26s.pt')
-            ->and($result->totalTime)->toBe(1.234)
-            ->and($result->stopped)->toBeTrue();
+            ->and($result->getTotalTime())->toBe(0.0)
+            ->and($result->isStopped())->toBeFalse()
+            ->and($result->isRunning())->toBeFalse()
+            ->and($result->getStreamUrl())->toBeNull();
     });
 
-    it('returns frame count', function () {
-        $frames = [
-            new InferenceResult(imagePath: '', provider: 'ultralytics', model: 'yolo26s.pt', detections: [], inferenceTime: 0.05),
-            new InferenceResult(imagePath: '', provider: 'ultralytics', model: 'yolo26s.pt', detections: [], inferenceTime: 0.06),
-            new InferenceResult(imagePath: '', provider: 'ultralytics', model: 'yolo26s.pt', detections: [], inferenceTime: 0.04),
-        ];
+    it('accumulates frames via addFrame', function () {
+        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt');
 
-        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt', frames: $frames, totalTime: 1.0, stopped: false);
+        $frame1 = new InferenceResult(imagePath: 'rtsp://stream', provider: 'ultralytics', model: 'yolo26s.pt', detections: [], inferenceTime: 0.05);
+        $frame2 = new InferenceResult(imagePath: 'rtsp://stream', provider: 'ultralytics', model: 'yolo26s.pt', detections: [], inferenceTime: 0.06);
 
-        expect($result->getFrameCount())->toBe(3);
+        $result->addFrame($frame1);
+        $result->addFrame($frame2);
+
+        expect($result->getFrameCount())->toBe(2)
+            ->and($result->getFrames())->toHaveCount(2);
     });
 
     it('returns zero frame count for empty frames', function () {
-        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt', frames: [], totalTime: 0.0, stopped: false);
+        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt');
 
         expect($result->getFrameCount())->toBe(0);
     });
@@ -57,46 +52,78 @@ describe('StreamResult', function () {
             new DetectionResult(class: 'person', confidence: 0.85, box: new BoundingBox(x1: 0, y1: 0, x2: 100, y2: 200)),
         ];
 
-        $frames = [
-            new InferenceResult(imagePath: '', provider: 'ultralytics', model: 'yolo26s.pt', detections: $detections1, inferenceTime: 0.05),
-            new InferenceResult(imagePath: '', provider: 'ultralytics', model: 'yolo26s.pt', detections: $detections2, inferenceTime: 0.06),
-        ];
-
-        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt', frames: $frames, totalTime: 1.0, stopped: false);
+        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt');
+        $result->addFrame(new InferenceResult(imagePath: '', provider: 'ultralytics', model: 'yolo26s.pt', detections: $detections1, inferenceTime: 0.05));
+        $result->addFrame(new InferenceResult(imagePath: '', provider: 'ultralytics', model: 'yolo26s.pt', detections: $detections2, inferenceTime: 0.06));
 
         expect($result->getTotalDetections())->toBe(3);
     });
 
     it('returns zero total detections for empty frames', function () {
-        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt', frames: [], totalTime: 0.0, stopped: false);
+        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt');
 
         expect($result->getTotalDetections())->toBe(0);
     });
 
     it('returns average inference time', function () {
-        $frames = [
-            new InferenceResult(imagePath: '', provider: 'ultralytics', model: 'yolo26s.pt', detections: [], inferenceTime: 0.10),
-            new InferenceResult(imagePath: '', provider: 'ultralytics', model: 'yolo26s.pt', detections: [], inferenceTime: 0.20),
-        ];
-
-        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt', frames: $frames, totalTime: 1.0, stopped: false);
+        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt');
+        $result->addFrame(new InferenceResult(imagePath: '', provider: 'ultralytics', model: 'yolo26s.pt', detections: [], inferenceTime: 0.10));
+        $result->addFrame(new InferenceResult(imagePath: '', provider: 'ultralytics', model: 'yolo26s.pt', detections: [], inferenceTime: 0.20));
 
         expect($result->getAverageInferenceTime())->toEqualWithDelta(0.15, 0.0001);
     });
 
     it('returns zero average inference time for empty frames', function () {
-        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt', frames: [], totalTime: 0.0, stopped: false);
+        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt');
 
         expect($result->getAverageInferenceTime())->toBe(0.0);
     });
 
+    it('setTotalTime and getTotalTime work', function () {
+        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt');
+        $result->setTotalTime(1.234);
+
+        expect($result->getTotalTime())->toBe(1.234);
+    });
+
+    it('setStopped and isStopped work', function () {
+        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt');
+
+        expect($result->isStopped())->toBeFalse();
+
+        $result->setStopped(true);
+
+        expect($result->isStopped())->toBeTrue();
+    });
+
+    it('setStreamUrl and getStreamUrl work', function () {
+        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt');
+
+        expect($result->getStreamUrl())->toBeNull();
+
+        $result->setStreamUrl('http://localhost:8765/stream');
+
+        expect($result->getStreamUrl())->toBe('http://localhost:8765/stream');
+    });
+
+    it('setRunning and isRunning work', function () {
+        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt');
+
+        expect($result->isRunning())->toBeFalse();
+
+        $result->setRunning(true);
+
+        expect($result->isRunning())->toBeTrue();
+    });
+
     it('converts to array', function () {
         $detections = [new DetectionResult(class: 'person', confidence: 0.9, box: new BoundingBox(x1: 0, y1: 0, x2: 100, y2: 200))];
-        $frames = [
-            new InferenceResult(imagePath: 'rtsp://stream', provider: 'ultralytics', model: 'yolo26s.pt', detections: $detections, inferenceTime: 0.05),
-        ];
 
-        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt', frames: $frames, totalTime: 1.5, stopped: true);
+        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt');
+        $result->addFrame(new InferenceResult(imagePath: 'rtsp://stream', provider: 'ultralytics', model: 'yolo26s.pt', detections: $detections, inferenceTime: 0.05));
+        $result->setTotalTime(1.5);
+        $result->setStopped(true);
+
         $array = $result->toArray();
 
         expect($array['source'])->toBe('rtsp://test')
@@ -111,7 +138,7 @@ describe('StreamResult', function () {
     });
 
     it('converts to json', function () {
-        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt', frames: [], totalTime: 0.0, stopped: false);
+        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt');
         $json = $result->toJson();
 
         expect($json)->toBeJson()
@@ -134,8 +161,8 @@ describe('StreamResult', function () {
         expect($result->source)->toBe('rtsp://test')
             ->and($result->provider)->toBe('ultralytics')
             ->and($result->model)->toBe('yolo26s.pt')
-            ->and($result->totalTime)->toBe(1.5)
-            ->and($result->stopped)->toBeTrue()
+            ->and($result->getTotalTime())->toBe(1.5)
+            ->and($result->isStopped())->toBeTrue()
             ->and($result->getFrameCount())->toBe(1);
     });
 
@@ -145,8 +172,71 @@ describe('StreamResult', function () {
         expect($result->source)->toBe('')
             ->and($result->provider)->toBe('')
             ->and($result->model)->toBe('')
-            ->and($result->totalTime)->toBe(0.0)
-            ->and($result->stopped)->toBeFalse()
+            ->and($result->getTotalTime())->toBe(0.0)
+            ->and($result->isStopped())->toBeFalse()
             ->and($result->getFrameCount())->toBe(0);
+    });
+
+    it('includes streamUrl in toArray when present', function () {
+        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt');
+        $result->setStreamUrl('http://localhost:8765/stream');
+
+        $array = $result->toArray();
+
+        expect($array)->toHaveKey('stream_url')
+            ->and($array['stream_url'])->toBe('http://localhost:8765/stream');
+    });
+
+    it('omits streamUrl from toArray when null', function () {
+        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt');
+
+        $array = $result->toArray();
+
+        expect($array)->not->toHaveKey('stream_url');
+    });
+
+    it('creates from array with stream_url', function () {
+        $result = StreamResult::fromArray([
+            'source' => 'rtsp://test',
+            'provider' => 'ultralytics',
+            'model' => 'yolo26s.pt',
+            'total_time' => 1.5,
+            'stopped' => true,
+            'stream_url' => 'http://localhost:8765/stream',
+        ], []);
+
+        expect($result->getStreamUrl())->toBe('http://localhost:8765/stream');
+    });
+
+    it('stopStream requests stop and calls kill callback', function () {
+        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt');
+        $killed = false;
+        $result->setKillCallback(static function () use (&$killed): void {
+            $killed = true;
+        });
+
+        expect($result->isStopRequested())->toBeFalse();
+
+        $result->stopStream();
+
+        expect($result->isStopRequested())->toBeTrue()
+            ->and($killed)->toBeTrue();
+    });
+
+    it('stopStream works without kill callback', function () {
+        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt');
+
+        $result->stopStream();
+
+        expect($result->isStopRequested())->toBeTrue();
+    });
+
+    it('toArray includes running field', function () {
+        $result = new StreamResult(source: 'rtsp://test', provider: 'ultralytics', model: 'yolo26s.pt');
+        $result->setRunning(true);
+
+        $array = $result->toArray();
+
+        expect($array['running'])->toBeTrue();
     });
 });

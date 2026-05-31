@@ -288,18 +288,15 @@ $json = $result->toJson();
 
 ## StreamResult
 
-Returned by `->startStream()` when processing real-time streams (RTSP, RTMP, HTTP, webcam). Only available with the Ultralytics provider.
+Returned by `->process()` when processing real-time streams (RTSP, RTMP, HTTP, webcam). Only available with the Ultralytics provider. Unlike other result types, `StreamResult` is **mutable** — it accumulates frames as the stream processes and supports `stopStream()` to halt the stream from within the callback.
 
 ```php
-readonly class StreamResult
+class StreamResult
 {
     public function __construct(
-        public string $source,       // Stream URL or webcam index
-        public string $provider,     // 'ultralytics'
-        public string $model,        // Model filename
-        public array $frames,        // InferenceResult[]
-        public float $totalTime,     // Total wall-clock time in seconds
-        public bool $stopped,        // Whether stopped by maxFrames limit
+        public string $source,   // Stream URL or webcam index
+        public string $provider, // 'ultralytics'
+        public string $model,    // Model filename
     ) {}
 }
 ```
@@ -308,9 +305,22 @@ readonly class StreamResult
 
 | Method | Return | Description |
 |--------|--------|-------------|
+| `addFrame(InferenceResult $frame)` | void | Accumulate a processed frame |
+| `setTotalTime(float $time)` | void | Set total wall-clock time |
+| `setStopped(bool $stopped)` | void | Set whether the stream was stopped early |
+| `setStreamUrl(?string $url)` | void | Set the MJPEG annotation URL |
+| `setRunning(bool $running)` | void | Set whether the stream is currently running |
+| `setKillCallback(\Closure $callback)` | void | Set the callback that kills the Python process |
+| `stopStream()` | void | Stop the stream — sets stop flag + kills process via SIGKILL |
+| `getFrames()` | `array<InferenceResult>` | All processed frames |
 | `getFrameCount()` | int | Number of frames processed |
 | `getTotalDetections()` | int | Sum of detections across all frames |
 | `getAverageInferenceTime()` | float | Mean inference time per frame |
+| `getTotalTime()` | float | Total wall-clock time in seconds |
+| `isStopped()` | bool | Whether stopped by `maxFramesToProcess` limit or `stopStream()` |
+| `isRunning()` | bool | Whether the stream is currently processing |
+| `isStopRequested()` | bool | Whether `stopStream()` has been called |
+| `getStreamUrl()` | ?string | MJPEG annotation URL (when `annotateStream` enabled) |
 | `toArray()` | array | Full structured output |
 | `toJson(int $flags = 0)` | string | JSON output |
 | `fromArray(array $data, array $frames = [])` | self | Create from raw data |
@@ -319,21 +329,42 @@ readonly class StreamResult
 $result = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLO26s)
-    ->stream('rtsp://192.168.1.100:554/live', function ($frame, $num) {
+    ->media('rtsp://192.168.1.100:554/live')
+    ->streamConfig(function ($frame, $num, $result) {
         echo "Frame $num: " . $frame->getDetectionCount() . " detections\n";
-    })
-    ->maxFrames(100)
-    ->startStream();
+    }, null, 100)
+    ->process();
 
-$result->getFrameCount();          // 100
-$result->getTotalDetections();     // 247
-$result->totalTime;                // 12.345 (seconds)
-$result->stopped;                  // true (stopped by maxFrames)
+$result->getFrameCount(); // 100
+$result->getTotalDetections(); // 247
+$result->getTotalTime(); // 12.345 (seconds)
+$result->isStopped(); // true (stopped by maxFramesToProcess)
+$result->getStreamUrl(); // 'http://0.0.0.0:8080' (if annotateStream enabled)
 
 // Per-frame access
-foreach ($result->frames as $frameResult) {
+foreach ($result->getFrames() as $frameResult) {
     echo "Detections: " . count($frameResult->detections) . "\n";
 }
+```
+
+### Stopping a Stream Early
+
+Call `$result->stopStream()` from inside the per-frame callback:
+
+```php
+$result = FluentVision::make()
+    ->useUltralytics()
+    ->model(YoloModel::YOLO26s)
+    ->media('rtsp://192.168.1.100:554/live')
+    ->streamConfig(function ($frame, $num, $result) {
+        if ($result->getFrameCount() >= 5) {
+            $result->stopStream();
+            return;
+        }
+    })
+    ->process();
+
+echo "Stopped early: " . ($result->isStopped() ? 'yes' : 'no') . "\n";
 ```
 
 See [Real-Time Streaming](realtime-streaming.md) for complete usage guide.
