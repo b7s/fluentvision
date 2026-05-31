@@ -34,7 +34,8 @@ describe('ProcessResult', function () {
         expect($result->detections)->toBeInstanceOf(InferenceResult::class)
             ->and($result->annotation)->toBeInstanceOf(AnnotatedResult::class)
             ->and($result->getDetectionCount())->toBe(1)
-            ->and($result->getAnnotatedPath())->toBe('/tmp/test_annotated.jpg');
+            ->and($result->getAnnotatedPath())->toBe('/tmp/test_annotated.jpg')
+            ->and($result->getTotalTime())->toBe(0.123);
     });
 
     it('checks annotated image existence', function () {
@@ -101,7 +102,8 @@ describe('ProcessResult', function () {
         );
 
         expect($result->detections)->toBeInstanceOf(VideoInferenceResult::class)
-            ->and($result->getDetectionCount())->toBe(3);
+            ->and($result->getDetectionCount())->toBe(3)
+            ->and($result->getTotalTime())->toBe(0.11);
     });
 
     it('converts to array', function () {
@@ -129,8 +131,10 @@ describe('ProcessResult', function () {
 
         expect($array)->toHaveKey('detections')
             ->and($array)->toHaveKey('annotation')
+            ->and($array)->toHaveKey('total_time')
             ->and($array['detections'])->toHaveKey('image_path')
-            ->and($array['annotation'])->toHaveKey('annotated_path');
+            ->and($array['annotation'])->toHaveKey('annotated_path')
+            ->and($array['total_time'])->toBe(0.1);
     });
 
     it('converts to json', function () {

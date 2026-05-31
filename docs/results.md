@@ -249,6 +249,7 @@ readonly class ProcessResult
 |--------|--------|-------------|
 | `hasAnnotatedImage()` | bool | Whether the annotated file exists on disk |
 | `getDetectionCount()` | int | Number of detections (total across frames for video) |
+| `getTotalTime()` | float | Inference time in ms (image: `inferenceTime`, video: `totalInferenceTime`) |
 | `getAnnotatedPath()` | string | Path to the annotated image/video |
 | `toArray()` | array | Full structured output |
 | `toJson(int $flags = 0)` | string | Compact JSON |

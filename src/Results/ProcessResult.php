@@ -32,6 +32,15 @@ readonly class ProcessResult
         return $this->annotation->annotatedPath;
     }
 
+    public function getTotalTime(): float
+    {
+        if ($this->detections instanceof VideoInferenceResult) {
+            return $this->detections->totalInferenceTime;
+        }
+
+        return $this->detections->inferenceTime;
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -40,6 +49,7 @@ readonly class ProcessResult
         return [
             'detections' => $this->detections->toArray(),
             'annotation' => $this->annotation->toArray(),
+            'total_time' => $this->getTotalTime(),
         ];
     }
 
