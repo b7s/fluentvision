@@ -41,7 +41,7 @@ foreach ($images as $filename) {
         ->model(YoloModel::YOLO26m)
         ->useCpu()
         ->conf(0.4)
-        ->image($path)
+        ->media($path)
         ->annotate();
 
     if ($result->hasAnnotatedImage()) {

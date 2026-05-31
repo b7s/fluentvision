@@ -20,7 +20,7 @@ $result = FluentVision::make()
     ->model(YoloModel::YOLO26s)
     ->useCpu()
     ->conf(0.5)
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->detect();
 
 echo $result->getDetectionCount() . " objects found\n";
@@ -79,7 +79,7 @@ $result = FluentVision::make()
     ->useCpu()
     ->conf(0.25) // default: 0.4
     ->prompts(['person', 'yellow hard hat'])
-    ->image('factory.jpg')
+    ->media('factory.jpg')
     ->detect();
 ```
 
@@ -98,7 +98,7 @@ Runs on **CPU** (~0.15s/image). See [Providers doc](docs/providers.md#yoloe-26-o
 $result = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLO26s)
-    ->image('modern-workspace-with-laptop-coffee-plants.jpg')
+    ->media('modern-workspace-with-laptop-coffee-plants.jpg')
     ->detect();
 ```
 
@@ -111,7 +111,7 @@ $result = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLO26s)
     ->conf(0.6)
-    ->image('woman-cup-coffe.jpg')
+    ->media('woman-cup-coffe.jpg')
     ->detect();
 ```
 
@@ -124,7 +124,7 @@ $result = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLOE26mPF) // Segment with Prompt free
     ->conf(0.8)
-    ->image('woman-bike-cars-trees-road-day.jpg')
+    ->media('woman-bike-cars-trees-road-day.jpg')
     ->detect();
 // 9 detections: person (90.6%), bicycle (91.2%), 7x car
 ```
@@ -172,6 +172,8 @@ use B7s\FluentVision\Enums\YoloTask;
 FluentVision::make()
     ->provider(Provider::Ultralytics) // or ->useUltralytics() / ->useNanodet()
     ->model(YoloModel::YOLO26s) // or ->model('yolo26s.pt') or ->model('/path/to/custom.pt')
+    ->media('/path/to/image.jpg')  // media type auto-detected from extension
+    // ->media('/path/to/clip.mp4') // video — auto-detected from extension
     ->useCpu() // or ->useGpu()
     ->conf(0.5) // confidence threshold
     ->iou(0.45) // IoU threshold (NMS)
@@ -181,7 +183,6 @@ FluentVision::make()
     ->prompts(['person wearing red', 'hard hat']) // YOLOE text prompts
     ->augment() // test-time augmentation
     ->half() // FP16 inference (GPU)
-    ->image('/path/to/image.jpg')
     ->detect();
 ```
 
@@ -189,7 +190,7 @@ FluentVision::make()
 
 ```php
 $result = FluentVision::make()
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->detect();
 ```
 
@@ -197,9 +198,10 @@ $result = FluentVision::make()
 
 ```php
 $result = FluentVision::make()
-    ->video('clip.mp4')
-    ->vidStride(5)        // process every 5th frame
-    ->detectVideo();
+    ->media('clip.mp4')  // .mp4 auto-detected as video
+    ->everyNframes(10) // process every 10th frame - default: 5
+    //->vidStride(10) // Alias for ->everyNframes(10)
+    ->detect();
 
 echo $result->getFrameCount() . " frames processed\n";
 echo $result->getTotalDetections() . " total detections\n";
@@ -209,7 +211,7 @@ echo $result->getTotalDetections() . " total detections\n";
 
 ```php
 $result = FluentVision::make()
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->annotate();
 
 echo "Annotated image saved to: " . $result->annotatedPath . "\n";
@@ -218,7 +220,7 @@ echo "Annotated image saved to: " . $result->annotatedPath . "\n";
 ### Working with Results
 
 ```php
-$result = FluentVision::make()->image('photo.jpg')->detect();
+$result = FluentVision::make()->media('photo.jpg')->detect();
 
 // Counts
 $result->getDetectionCount();
@@ -252,7 +254,7 @@ use B7s\FluentVision\Enums\NanodetModel;
 $result = FluentVision::make()
     ->useNanodet()
     ->model(NanodetModel::PlusM416)
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->detect();
 ```
 
@@ -264,13 +266,13 @@ Pass a path to your own trained model — provider is auto-inferred from the fil
 // Ultralytics (.pt, .onnx, .engine, etc.) — auto-detected
 $result = FluentVision::make()
     ->model('/path/to/my-trained-model.pt')
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->detect();
 
 // NanoDet — use nanodetCustom() for config + checkpoint
 $result = FluentVision::make()
     ->nanodetCustom('/path/config.yml', '/path/model.ckpt')
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->detect();
 ```
 

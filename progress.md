@@ -11,7 +11,7 @@ The user selects the provider via config or fluent API, then the same chainable 
 
 ## How It Works
 
-1. **PHP Fluent API** — User chains methods like `FluentVision::make()->provider(Provider::Ultralytics)->model(YoloModel::YOLO26s)->useCpu()->conf(0.5)->image('photo.jpg')->detect()`
+1. **PHP Fluent API** — User chains methods like `FluentVision::make()->provider(Provider::Ultralytics)->model(YoloModel::YOLO26s)->useCpu()->conf(0.5)->media('photo.jpg')->detect()`
 2. **Provider Resolution** — FluentVision resolves which provider to use (Ultralytics or NanoDet) and builds the correct Python command
 3. **Python Bridge** — PHP executes a bundled Python script via Symfony Process:
    - `scripts/ultralytics_inference.py` for Ultralytics provider

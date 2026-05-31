@@ -30,7 +30,7 @@ $result = FluentVision::make()
     ->useCpu()
     ->conf(0.4)
     ->prompts(['person', 'hard hat', 'person wearing yellow'])
-    ->image($imagesDir.'/factory-workers-handshaking-each-other-production-line-yellow-helmet.jpg')
+    ->media($imagesDir.'/factory-workers-handshaking-each-other-production-line-yellow-helmet.jpg')
     ->detect();
 
 echo "Model: {$result->model}\n";
@@ -58,7 +58,7 @@ $result2 = FluentVision::make()
     ->useCpu()
     ->conf(0.4)
     ->prompts(['person', 'cup', 'nighttime scene', 'daytime scene'])
-    ->image($imagesDir.'/woman-cup-coffe.jpg')
+    ->media($imagesDir.'/woman-cup-coffe.jpg')
     ->detect();
 
 echo "Model: {$result2->model}\n";
@@ -85,7 +85,7 @@ $result3 = FluentVision::make()
     ->model(YoloModel::YOLOE26sPF)
     ->useCpu()
     ->conf(0.4)
-    ->image($imagesDir.'/modern-workspace-with-laptop-coffee-plants.jpg')
+    ->media($imagesDir.'/modern-workspace-with-laptop-coffee-plants.jpg')
     ->detect();
 
 echo "Model: {$result3->model}\n";

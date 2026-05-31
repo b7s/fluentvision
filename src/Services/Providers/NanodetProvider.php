@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace B7s\FluentVision\Services\Providers;
 
 use B7s\FluentVision\Enums\Device;
+use B7s\FluentVision\Enums\MediaType;
 
 class NanodetProvider implements ProviderContract
 {
@@ -22,30 +23,6 @@ class NanodetProvider implements ProviderContract
         return __DIR__.'/../../../scripts/nanodet_inference.py';
     }
 
-    /**
-     * @param  array<string, mixed>  $options
-     * @return array<int, string>
-     */
-    public function buildArguments(
-        string $imagePath,
-        string $model,
-        Device $device,
-        array $options = [],
-    ): array {
-        $args = [
-            '--image', $imagePath,
-            '--model', $model,
-            '--device', $device->toNanodetArg(),
-        ];
-
-        $this->appendNanodetOptions($options, $args);
-        OptionBuilder::appendFloatOption($options, $args, 'conf', '--conf');
-        OptionBuilder::appendIntOption($options, $args, 'imgsz', '--imgsz');
-        OptionBuilder::appendBoolOption($options, $args, 'save', '--save');
-
-        return $args;
-    }
-
     public function supportsVideo(): bool
     {
         return true;
@@ -55,20 +32,30 @@ class NanodetProvider implements ProviderContract
      * @param  array<string, mixed>  $options
      * @return array<int, string>
      */
-    public function buildVideoArguments(
-        string $videoPath,
+    public function buildArguments(
+        string $mediaPath,
+        MediaType $mediaType,
         string $model,
         Device $device,
         array $options = [],
     ): array {
+        $mediaFlag = $mediaType->isVideo() ? '--video' : '--image';
+
         $args = [
-            '--video', $videoPath,
+            $mediaFlag, $mediaPath,
             '--model', $model,
             '--device', $device->toNanodetArg(),
         ];
 
         $this->appendNanodetOptions($options, $args);
-        OptionBuilder::appendVideoOptions($options, $args);
+        OptionBuilder::appendFloatOption($options, $args, 'conf', '--conf');
+        OptionBuilder::appendIntOption($options, $args, 'imgsz', '--imgsz');
+        OptionBuilder::appendBoolOption($options, $args, 'save', '--save');
+        OptionBuilder::appendStringOption($options, $args, 'save_path', '--save-path');
+
+        if ($mediaType->isVideo()) {
+            OptionBuilder::appendVideoOptions($options, $args);
+        }
 
         return $args;
     }

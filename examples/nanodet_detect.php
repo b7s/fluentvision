@@ -34,7 +34,7 @@ foreach ($images as $filename) {
         ->model(NanodetModel::PlusM416)
         ->useCpu()
         ->conf(0.4)
-        ->image($path)
+        ->media($path)
         ->detect();
 
     echo "Model:       {$result->model}\n";

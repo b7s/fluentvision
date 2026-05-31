@@ -11,7 +11,7 @@ use B7s\FluentVision\Exceptions\ModelNotFoundException;
 use function file_exists;
 use function sprintf;
 
-readonly class ModelService
+readonly class ModelService implements ModelServiceInterface
 {
     public function __construct(
         private string $modelDir,

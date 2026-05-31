@@ -13,8 +13,8 @@ describe('PythonService', function () {
 
         $path = $service->resolvePythonPath();
 
-        expect($path)->toBeString();
-        expect(file_exists($path))->toBeTrue();
+        expect($path)->toBeString()
+            ->and(file_exists($path))->toBeTrue();
     });
 
     it('throws when no python found', function () {
@@ -37,8 +37,8 @@ describe('PythonService', function () {
 
         $version = $service->getPythonVersion();
 
-        expect($version)->toBeString();
-        expect($version)->toContain('Python');
+        expect($version)->toBeString()
+            ->and($version)->toContain('Python');
     });
 
     it('resets cached python path', function () {

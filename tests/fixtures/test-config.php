@@ -16,6 +16,7 @@ return [
     'default_max_det' => 300,
     'model_dir' => '/tmp/fluentvision-test-models',
     'nanodet_repo_path' => '/tmp/fluentvision-test-nanodet',
+    'save_path' => '/tmp/fluentvision-test-output',
     'timeout' => 0,
     'verbose' => false,
 ];

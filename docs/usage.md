@@ -122,30 +122,39 @@ $vision->augment()       // TTA for better accuracy
 
 ### Video Options
 
-| Method | Type | Default | Description |
-|--------|------|---------|-------------|
-| `vidStride(int $stride)` | int | 1 | Process every Nth frame |
+| Method                      | Type | Default | Description             |
+|-----------------------------|------|---------|-------------------------|
+| `everyNframes(int $stride)` | int  | 1       | Process every Nth frame |
 
 ```php
-$vision->vidStride(5)  // Process every 5th frame
-    ->video('clip.mp4')
-    ->detectVideo();
+$vision->everyNframes(5) // Process every 5th frame
+    ->media('clip.mp4')
+    ->detect();
 ```
 
 ### Input Methods
 
 | Method | Description |
 |--------|-------------|
-| `image(string $path)` | Set image path for detection/annotation |
-| `video(string $path)` | Set video path for video detection |
+| `media(string $path, ?MediaType $type = null)` | Set media path — type auto-detected from extension, or pass explicit `MediaType` |
+
+```php
+use B7s\FluentVision\Enums\MediaType;
+
+// Auto-detected from extension
+$vision->media('photo.jpg');  // → MediaType::Image
+$vision->media('clip.mp4');   // → MediaType::Video
+
+// Explicit override (for unusual extensions)
+$vision->media('data.raw', MediaType::Image);
+```
 
 ### Output Methods
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `detect()` | `InferenceResult` | Run object detection on the image |
-| `detectVideo()` | `VideoInferenceResult` | Run detection on a video |
-| `annotate()` | `AnnotatedResult` | Run detection and save annotated image |
+| `detect()` | `InferenceResult \| VideoInferenceResult` | Run detection on image or video |
+| `annotate()` | `AnnotatedResult` | Run detection and save annotated output |
 
 ## Complete Examples
 
@@ -153,7 +162,7 @@ $vision->vidStride(5)  // Process every 5th frame
 
 ```php
 $result = FluentVision::make()
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->detect();
 
 foreach ($result->detections as $d) {
@@ -172,7 +181,7 @@ foreach ($result->detections as $d) {
 $result = FluentVision::make()
     ->conf(0.8)
     ->classes(['person'])
-    ->image('crowd.jpg')
+    ->media('crowd.jpg')
     ->detect();
 
 echo "Found {$result->getDetectionCount()} high-confidence persons\n";
@@ -188,21 +197,21 @@ use B7s\FluentVision\Enums\YoloModel;
 $segResult = FluentVision::make()
     ->model(YoloModel::YOLO26s)
     ->task(YoloTask::Segment)
-    ->image('street.jpg')
+    ->media('street.jpg')
     ->detect();
 
 // Pose estimation
 $poseResult = FluentVision::make()
     ->model(YoloModel::YOLO26s)
     ->task(YoloTask::Pose)
-    ->image('athlete.jpg')
+    ->media('athlete.jpg')
     ->detect();
 
 // Oriented bounding boxes
 $obbResult = FluentVision::make()
     ->model(YoloModel::YOLO26s)
     ->task(YoloTask::Obb)
-    ->image('aerial.jpg')
+    ->media('aerial.jpg')
     ->detect();
 ```
 
@@ -219,7 +228,7 @@ $result = FluentVision::make()
     ->model(YoloModel::YOLOE26s)
     ->prompts(['person wearing red', 'hard hat', 'nighttime scene'])
     ->conf(0.25)
-    ->image('factory.jpg')
+    ->media('factory.jpg')
     ->detect();
 
 // Prompt-free: auto-detect without prompts
@@ -227,7 +236,7 @@ $result = FluentVision::make()
     ->useUltralytics()
     ->model(YoloModel::YOLOE26sPF)
     ->conf(0.25)
-    ->image('workspace.jpg')
+    ->media('workspace.jpg')
     ->detect();
 ```
 
@@ -237,10 +246,10 @@ Both YOLOE variants run on **CPU** (~0.15s per image for YOLOE-26s). See [Provid
 
 ```php
 $result = FluentVision::make()
-    ->video('traffic.mp4')
+    ->media('traffic.mp4')  // .mp4 auto-detected as video
     ->conf(0.4)
-    ->vidStride(10)  // Sample every 10th frame
-    ->detectVideo();
+    ->everyNframes(10) // Sample every 10th frame
+    ->detect();
 
 echo "Processed {$result->getFrameCount()} frames\n";
 echo "Total detections: {$result->getTotalDetections()}\n";
@@ -251,7 +260,7 @@ echo "Avg inference time: {$result->getAverageInferenceTime()}ms\n";
 
 ```php
 $result = FluentVision::make()
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->annotate();
 
 if ($result->hasAnnotatedImage()) {
@@ -266,7 +275,7 @@ if ($result->hasAnnotatedImage()) {
 $vision = FluentVision::make('/path/to/high-accuracy-config.php');
 
 $result = $vision
-    ->image('detailed.jpg')
+    ->media('detailed.jpg')
     ->detect();
 ```
 
@@ -286,7 +295,7 @@ $vision->getConfig();    // Config object
 
 ## Method Chaining
 
-All setter methods return `self` for fluent chaining. Only the terminal methods (`detect()`, `detectVideo()`, `annotate()`) return result objects and break the chain.
+All setter methods return `self` for fluent chaining. Only the terminal methods (`detect()`, `annotate()`) return result objects and break the chain.
 
 ```php
 // Build up configuration
@@ -296,11 +305,11 @@ $vision = FluentVision::make()
     ->imgsz(640);
 
 // Reuse the same configuration for multiple images
-$result1 = $vision->image('photo1.jpg')->detect();
-$result2 = $vision->image('photo2.jpg')->detect();
+$result1 = $vision->media('photo1.jpg')->detect();
+$result2 = $vision->media('photo2.jpg')->detect();
 ```
 
-Note: After calling a terminal method, the image/video path remains set. You can call `detect()` again on a new image without re-chaining all options.
+Note: After calling a terminal method, the media path remains set. You can call `detect()` again on a new media path without re-chaining all options.
 
 ## Error Handling
 
@@ -311,7 +320,7 @@ use B7s\FluentVision\Exceptions\ModelNotFoundException;
 
 try {
     $result = FluentVision::make()
-        ->image('photo.jpg')
+    ->media('photo.jpg')
         ->detect();
 } catch (PythonNotFoundException $e) {
     // Python interpreter not found
@@ -320,7 +329,7 @@ try {
     // Python script failed or returned invalid output
     echo "Inference error: " . $e->getMessage();
 } catch (RuntimeException $e) {
-    // No image path set
+    // No media path set
     echo "Setup error: " . $e->getMessage();
 }
 ```

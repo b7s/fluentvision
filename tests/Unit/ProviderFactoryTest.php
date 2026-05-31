@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use B7s\FluentVision\Enums\Device;
+use B7s\FluentVision\Enums\MediaType;
 use B7s\FluentVision\Enums\Provider;
 use B7s\FluentVision\Exceptions\ProviderNotFoundException;
 use B7s\FluentVision\Services\Providers\NanodetProvider;
@@ -51,18 +52,19 @@ describe('UltralyticsProvider', function () {
     it('builds image arguments', function () {
         $provider = new UltralyticsProvider;
         $args = $provider->buildArguments(
-            imagePath: '/tmp/test.jpg',
+            mediaPath: '/tmp/test.jpg',
+            mediaType: MediaType::Image,
             model: 'yolo26s.pt',
             device: Device::Cpu,
             options: ['conf' => 0.5, 'iou' => 0.45],
         );
 
-        expect($args)->toContain('--image');
-        expect($args)->toContain('/tmp/test.jpg');
-        expect($args)->toContain('--model');
-        expect($args)->toContain('yolo26s.pt');
-        expect($args)->toContain('--conf');
-        expect($args)->toContain('0.5');
+        expect($args)->toContain('--image')
+            ->and($args)->toContain('/tmp/test.jpg')
+            ->and($args)->toContain('--model')
+            ->and($args)->toContain('yolo26s.pt')
+            ->and($args)->toContain('--conf')
+            ->and($args)->toContain('0.5');
     });
 
     it('builds video arguments', function () {
@@ -70,14 +72,15 @@ describe('UltralyticsProvider', function () {
 
         expect($provider->supportsVideo())->toBeTrue();
 
-        $args = $provider->buildVideoArguments(
-            videoPath: '/tmp/test.mp4',
+        $args = $provider->buildArguments(
+            mediaPath: '/tmp/test.mp4',
+            mediaType: MediaType::Video,
             model: 'yolo26s.pt',
             device: Device::Gpu,
         );
 
-        expect($args)->toContain('--video');
-        expect($args)->toContain('/tmp/test.mp4');
+        expect($args)->toContain('--video')
+            ->and($args)->toContain('/tmp/test.mp4');
     });
 });
 
@@ -85,17 +88,18 @@ describe('NanodetProvider', function () {
     it('builds image arguments', function () {
         $provider = new NanodetProvider(nanodetRepoPath: '/opt/nanodet');
         $args = $provider->buildArguments(
-            imagePath: '/tmp/test.jpg',
+            mediaPath: '/tmp/test.jpg',
+            mediaType: MediaType::Image,
             model: 'nanodet-plus-m-416',
             device: Device::Cpu,
             options: ['config' => '/tmp/config.yml', 'checkpoint' => '/tmp/model.ckpt'],
         );
 
-        expect($args)->toContain('--image');
-        expect($args)->toContain('--config');
-        expect($args)->toContain('/tmp/config.yml');
-        expect($args)->toContain('--nanodet-path');
-        expect($args)->toContain('/opt/nanodet');
+        expect($args)->toContain('--image')
+            ->and($args)->toContain('--config')
+            ->and($args)->toContain('/tmp/config.yml')
+            ->and($args)->toContain('--nanodet-path')
+            ->and($args)->toContain('/opt/nanodet');
     });
 
     it('builds video arguments', function () {
@@ -103,13 +107,14 @@ describe('NanodetProvider', function () {
 
         expect($provider->supportsVideo())->toBeTrue();
 
-        $args = $provider->buildVideoArguments(
-            videoPath: '/tmp/test.mp4',
+        $args = $provider->buildArguments(
+            mediaPath: '/tmp/test.mp4',
+            mediaType: MediaType::Video,
             model: 'nanodet-plus-m-416',
             device: Device::Gpu,
         );
 
-        expect($args)->toContain('--video');
-        expect($args)->toContain('cuda:0');
+        expect($args)->toContain('--video')
+            ->and($args)->toContain('cuda:0');
     });
 });

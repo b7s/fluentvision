@@ -142,7 +142,7 @@ For GPU inference (NVIDIA CUDA):
 FluentVision::make()
     ->useGpu()
     ->half()  // FP16 inference for faster GPU performance
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->detect();
 ```
 

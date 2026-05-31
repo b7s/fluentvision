@@ -26,6 +26,7 @@ def parse_args():
     parser.add_argument("--end2end", action="store_true", help="End-to-end inference")
     parser.add_argument("--vid-stride", type=int, default=1, help="Video frame stride")
     parser.add_argument("--save", action="store_true", help="Save annotated image/video")
+    parser.add_argument("--save-path", type=str, default=None, help="Directory to save annotated output")
     parser.add_argument("--prompts", type=str, default=None, help="Comma-separated text prompts for YOLOE open-vocabulary detection")
     return parser.parse_args()
 
@@ -48,6 +49,10 @@ def run_image_inference(model, args):
         "save": args.save,
         "verbose": False,
     }
+
+    if args.save_path and args.save:
+        predict_kwargs["project"] = args.save_path
+        predict_kwargs["name"] = ""
 
     if not is_yoloe_model(model):
         predict_kwargs["agnostic_nms"] = args.agnostic_nms
@@ -87,7 +92,7 @@ def run_image_inference(model, args):
         save_dir = Path(result.save_dir)
         saved_files = list(save_dir.glob("*")) if save_dir.exists() else []
         if saved_files:
-            output["annotated_path"] = str(saved_files[-1])
+            output["annotated_path"] = str(saved_files[-1].resolve())
 
     return output
 
@@ -105,6 +110,10 @@ def run_video_inference(model, args):
         "verbose": False,
         "stream": True,
     }
+
+    if args.save_path and args.save:
+        predict_kwargs["project"] = args.save_path
+        predict_kwargs["name"] = ""
     if args.classes is not None:
         predict_kwargs["classes"] = [int(c) for c in args.classes.split(",")]
 

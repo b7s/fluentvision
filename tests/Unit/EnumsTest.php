@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use B7s\FluentVision\Enums\Device;
+use B7s\FluentVision\Enums\MediaType;
 use B7s\FluentVision\Enums\NanodetModel;
 use B7s\FluentVision\Enums\Provider;
 use B7s\FluentVision\Enums\YoloModel;
@@ -171,5 +172,50 @@ describe('Device enum', function () {
         expect(Device::Cpu->isCpu())->toBeTrue()
             ->and(Device::Cpu->isGpu())->toBeFalse()
             ->and(Device::Gpu->isGpu())->toBeTrue();
+    });
+});
+
+describe('MediaType enum', function () {
+    it('has correct cases', function () {
+        expect(MediaType::cases())->toHaveCount(2)
+            ->and(MediaType::Image->value)->toBe('image')
+            ->and(MediaType::Video->value)->toBe('video');
+    });
+
+    it('returns correct labels', function () {
+        expect(MediaType::Image->label())->toBe('Image')
+            ->and(MediaType::Video->label())->toBe('Video');
+    });
+
+    it('checks media type', function () {
+        expect(MediaType::Image->isImage())->toBeTrue()
+            ->and(MediaType::Image->isVideo())->toBeFalse()
+            ->and(MediaType::Video->isVideo())->toBeTrue()
+            ->and(MediaType::Video->isImage())->toBeFalse();
+    });
+
+    it('infers image type from path', function () {
+        expect(MediaType::inferFromPath('/tmp/photo.jpg'))->toBe(MediaType::Image)
+            ->and(MediaType::inferFromPath('/tmp/photo.png'))->toBe(MediaType::Image)
+            ->and(MediaType::inferFromPath('/tmp/photo.webp'))->toBe(MediaType::Image);
+    });
+
+    it('infers video type from path', function () {
+        expect(MediaType::inferFromPath('/tmp/clip.mp4'))->toBe(MediaType::Video)
+            ->and(MediaType::inferFromPath('/tmp/clip.avi'))->toBe(MediaType::Video)
+            ->and(MediaType::inferFromPath('/tmp/clip.mov'))->toBe(MediaType::Video);
+    });
+
+    it('defaults to image for unknown extensions', function () {
+        expect(MediaType::inferFromPath('/tmp/file.dat'))->toBe(MediaType::Image)
+            ->and(MediaType::inferFromPath('/tmp/file.unknown'))->toBe(MediaType::Image);
+    });
+
+    it('lists video extensions', function () {
+        expect(MediaType::videoExtensions())->toContain('mp4', 'avi', 'mov', 'mkv', 'webm');
+    });
+
+    it('lists image extensions', function () {
+        expect(MediaType::imageExtensions())->toContain('jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp');
     });
 });

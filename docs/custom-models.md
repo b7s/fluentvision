@@ -17,7 +17,7 @@ $result = FluentVision::make()
     ->model('/home/user/models/my-yolo-custom.pt')
     ->useCpu()
     ->conf(0.4)
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->detect();
 ```
 
@@ -30,7 +30,7 @@ $result = FluentVision::make()
     ->model('my-yolo-custom.pt')
     ->useCpu()
     ->conf(0.4)
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->detect();
 ```
 
@@ -64,7 +64,7 @@ $result = FluentVision::make()
     )
     ->useCpu()
     ->conf(0.35)
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->detect();
 ```
 
@@ -101,13 +101,13 @@ When you pass a model path string to `model()`, FluentVision infers the correct 
 // Auto-infers Ultralytics from .pt extension
 $result = FluentVision::make()
     ->model('/path/to/my-model.pt')
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->detect();
 
 // Auto-infers NanoDet from .ckpt extension
 $result = FluentVision::make()
     ->model('/path/to/my-model.ckpt')
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->detect();
 ```
 
@@ -120,7 +120,7 @@ Auto-inference is skipped when you explicitly set a provider:
 $result = FluentVision::make()
     ->useUltralytics()
     ->model('custom.ckpt') // Would normally infer NanoDet, but Ultralytics is explicit
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->detect();
 ```
 
@@ -158,7 +158,7 @@ When you pass a string to `model()`, FluentVision resolves it in this order:
 $result = FluentVision::make()
     ->model('/data/models/yolo-screw-defects.pt')
     ->conf(0.3)
-    ->image('production-line.jpg')
+    ->media('production-line.jpg')
     ->detect();
 
 foreach ($result->detections as $d) {
@@ -173,7 +173,7 @@ foreach ($result->detections as $d) {
 ```php
 $result = FluentVision::make()
     ->model('/data/exports/yolo26s-int8.onnx')
-    ->image('warehouse.jpg')
+    ->media('warehouse.jpg')
     ->annotate();
 
 echo "Saved to: {$result->annotatedPath}\n";
@@ -189,6 +189,6 @@ $result = FluentVision::make()
     )
     ->conf(0.25)
     ->imgsz(416)
-    ->image('meter-reading.jpg')
+    ->media('meter-reading.jpg')
     ->detect();
 ```

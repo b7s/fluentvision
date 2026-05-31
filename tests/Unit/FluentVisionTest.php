@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use B7s\FluentVision\Enums\Device;
+use B7s\FluentVision\Enums\MediaType;
 use B7s\FluentVision\Enums\NanodetModel;
 use B7s\FluentVision\Enums\Provider;
 use B7s\FluentVision\Enums\YoloModel;
@@ -92,19 +93,13 @@ describe('FluentVision', function () {
         expect($fv->getModel())->toBe('yoloe-26s-seg-pf.pt');
     });
 
-    it('throws when detecting without image', function () {
+    it('throws when detecting without media', function () {
         $fv = FluentVision::make();
 
         expect(fn () => $fv->detect())->toThrow(RuntimeException::class);
     });
 
-    it('throws when detecting video without video path', function () {
-        $fv = FluentVision::make();
-
-        expect(fn () => $fv->detectVideo())->toThrow(RuntimeException::class);
-    });
-
-    it('throws when annotating without image', function () {
+    it('throws when annotating without media', function () {
         $fv = FluentVision::make();
 
         expect(fn () => $fv->annotate())->toThrow(RuntimeException::class);
@@ -157,5 +152,40 @@ describe('FluentVision', function () {
         $fv->model('exported-model.onnx');
 
         expect($fv->getProvider())->toBe(Provider::Ultralytics);
+    });
+
+    it('sets savePath fluently', function () {
+        $fv = FluentVision::make();
+        $result = $fv->savePath('/tmp/my-output');
+
+        expect($result)->toBeInstanceOf(FluentVision::class);
+    });
+
+    it('auto-infers image media type from path', function () {
+        $fv = FluentVision::make();
+        $fv->media('/tmp/photo.jpg');
+
+        expect($fv->getMediaType())->toBe(MediaType::Image);
+    });
+
+    it('auto-infers video media type from path', function () {
+        $fv = FluentVision::make();
+        $fv->media('/tmp/clip.mp4');
+
+        expect($fv->getMediaType())->toBe(MediaType::Video);
+    });
+
+    it('allows explicit media type override', function () {
+        $fv = FluentVision::make();
+        $fv->media('/tmp/somefile.dat', MediaType::Image);
+
+        expect($fv->getMediaType())->toBe(MediaType::Image);
+    });
+
+    it('media method chains fluently', function () {
+        $fv = FluentVision::make();
+        $result = $fv->media('/tmp/photo.jpg');
+
+        expect($result)->toBeInstanceOf(FluentVision::class);
     });
 });

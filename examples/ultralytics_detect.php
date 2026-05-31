@@ -34,7 +34,7 @@ foreach ($images as $filename) {
         ->model(YoloModel::YOLO26s)
         ->useCpu()
         ->conf(0.4)
-        ->image($path)
+        ->media($path)
         ->detect();
 
     echo "Model:       {$result->model}\n";

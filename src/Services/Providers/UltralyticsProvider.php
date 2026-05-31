@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace B7s\FluentVision\Services\Providers;
 
 use B7s\FluentVision\Enums\Device;
+use B7s\FluentVision\Enums\MediaType;
 
 class UltralyticsProvider implements ProviderContract
 {
@@ -18,18 +19,26 @@ class UltralyticsProvider implements ProviderContract
         return __DIR__.'/../../../scripts/ultralytics_inference.py';
     }
 
+    public function supportsVideo(): bool
+    {
+        return true;
+    }
+
     /**
      * @param  array<string, mixed>  $options
      * @return array<int, string>
      */
     public function buildArguments(
-        string $imagePath,
+        string $mediaPath,
+        MediaType $mediaType,
         string $model,
         Device $device,
         array $options = [],
     ): array {
+        $mediaFlag = $mediaType->isVideo() ? '--video' : '--image';
+
         $args = [
-            '--image', $imagePath,
+            $mediaFlag, $mediaPath,
             '--model', $model,
             '--device', $device->toUltralyticsArg(),
         ];
@@ -46,33 +55,8 @@ class UltralyticsProvider implements ProviderContract
         OptionBuilder::appendBoolOption($options, $args, 'half', '--half');
         OptionBuilder::appendBoolOption($options, $args, 'end2end', '--end2end');
         OptionBuilder::appendBoolOption($options, $args, 'save', '--save');
+        OptionBuilder::appendStringOption($options, $args, 'save_path', '--save-path');
         OptionBuilder::appendIntOption($options, $args, 'vid_stride', '--vid-stride');
-
-        return $args;
-    }
-
-    public function supportsVideo(): bool
-    {
-        return true;
-    }
-
-    /**
-     * @param  array<string, mixed>  $options
-     * @return array<int, string>
-     */
-    public function buildVideoArguments(
-        string $videoPath,
-        string $model,
-        Device $device,
-        array $options = [],
-    ): array {
-        $args = [
-            '--video', $videoPath,
-            '--model', $model,
-            '--device', $device->toUltralyticsArg(),
-        ];
-
-        OptionBuilder::appendVideoOptions($options, $args);
 
         return $args;
     }

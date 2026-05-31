@@ -113,6 +113,17 @@ class Config
         return $home.'/.fluentvision/nanodet';
     }
 
+    public function savePath(): string
+    {
+        $dir = $this->string('save_path');
+
+        if ($dir !== '') {
+            return $dir;
+        }
+
+        return getcwd().'/fluentvision-output';
+    }
+
     public function timeout(): int
     {
         return $this->integer('timeout', 0);
@@ -150,6 +161,7 @@ class Config
             'default_max_det' => 300,
             'model_dir' => null,
             'nanodet_repo_path' => null,
+            'save_path' => null,
             'timeout' => 0,
             'verbose' => false,
         ];

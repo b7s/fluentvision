@@ -4,7 +4,7 @@ All FluentVision terminal methods return typed, immutable result objects. Regard
 
 ## InferenceResult
 
-Returned by `->detect()`.
+Returned by `->detect()` when processing image input.
 
 ```php
 readonly class InferenceResult
@@ -23,7 +23,7 @@ readonly class InferenceResult
 
 ```php
 $result = FluentVision::make()
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->detect();
 
 // Count
@@ -153,7 +153,7 @@ $box->centerY();   // 160.0
 
 ## VideoInferenceResult
 
-Returned by `->detectVideo()`.
+Returned by `->detect()` when processing video input.
 
 ```php
 readonly class VideoInferenceResult
@@ -179,8 +179,8 @@ readonly class VideoInferenceResult
 
 ```php
 $result = FluentVision::make()
-    ->video('clip.mp4')
-    ->detectVideo();
+    ->media('clip.mp4')  // auto-detected as video
+    ->detect();
 
 $result->getFrameCount();            // 42
 $result->getTotalDetections();       // 187
@@ -220,7 +220,7 @@ readonly class AnnotatedResult
 
 ```php
 $result = FluentVision::make()
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->annotate();
 
 if ($result->hasAnnotatedImage()) {
@@ -282,7 +282,7 @@ fclose($fp);
 $allDetections = [];
 
 foreach (glob('images/*.jpg') as $path) {
-    $result = FluentVision::make()->image($path)->detect();
+    $result = FluentVision::make()->media($path)->detect();
     $allDetections = array_merge($allDetections, $result->detections);
 }
 

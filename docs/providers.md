@@ -71,7 +71,7 @@ $result = FluentVision::make()
     ->conf(0.5)
     ->useGpu()
     ->half()
-    ->image('street.jpg')
+    ->media('street.jpg')
     ->detect();
 ```
 
@@ -105,7 +105,7 @@ $result = FluentVision::make()
     ->useCpu()
     ->conf(0.25)
     ->prompts(['person', 'hard hat', 'person wearing yellow', 'nighttime scene'])
-    ->image('factory.jpg')
+    ->media('factory.jpg')
     ->detect();
 
 foreach ($result->detections as $d) {
@@ -129,7 +129,7 @@ $result = FluentVision::make()
     ->model(YoloModel::YOLOE26sPF)
     ->useCpu()
     ->conf(0.25)
-    ->image('workspace.jpg')
+    ->media('workspace.jpg')
     ->detect();
 ```
 
@@ -143,7 +143,7 @@ $result = FluentVision::make()
     ->model(YoloModel::YOLOE26m)
     ->useGpu()
     ->prompts(['person wearing blue', 'safety vest'])
-    ->image('construction-site.jpg')
+    ->media('construction-site.jpg')
     ->detect();
 ```
 
@@ -199,7 +199,7 @@ $result = FluentVision::make()
     ->model(NanodetModel::PlusM416)
     ->conf(0.4)
     ->useCpu()
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->detect();
 ```
 
@@ -213,13 +213,13 @@ use B7s\FluentVision\Enums\Provider;
 // Use Ultralytics for high-accuracy batch processing
 $yoloResult = FluentVision::make()
     ->provider(Provider::Ultralytics)
-    ->image('detailed.jpg')
+    ->media('detailed.jpg')
     ->detect();
 
 // Use NanoDet for real-time edge inference
 $nanoResult = FluentVision::make()
     ->provider(Provider::Nanodet)
-    ->image('detailed.jpg')
+    ->media('detailed.jpg')
     ->detect();
 
 // Both return InferenceResult — same API

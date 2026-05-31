@@ -29,14 +29,14 @@ $providers = [
         ->model(YoloModel::YOLO26s)
         ->useCpu()
         ->conf(0.4)
-        ->image($path)
+        ->media($path)
         ->detect(),
     'NanoDet-Plus M 416' => fn (string $path) => FluentVision::make()
         ->useNanodet()
         ->model(NanodetModel::PlusM416)
         ->useCpu()
         ->conf(0.4)
-        ->image($path)
+        ->media($path)
         ->detect(),
 ];
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace B7s\FluentVision;
 
 use B7s\FluentVision\Enums\Device;
+use B7s\FluentVision\Enums\MediaType;
 use B7s\FluentVision\Enums\NanodetModel;
 use B7s\FluentVision\Enums\Provider;
 use B7s\FluentVision\Enums\YoloModel;
@@ -13,13 +14,19 @@ use B7s\FluentVision\Results\AnnotatedResult;
 use B7s\FluentVision\Results\InferenceResult;
 use B7s\FluentVision\Results\VideoInferenceResult;
 use B7s\FluentVision\Services\InferenceService;
+use B7s\FluentVision\Services\InferenceServiceInterface;
 use B7s\FluentVision\Services\ModelService;
+use B7s\FluentVision\Services\ModelServiceInterface;
 use B7s\FluentVision\Services\Providers\ProviderFactory;
 use B7s\FluentVision\Services\PythonService;
+use JsonException;
 use RuntimeException;
 use Throwable;
 
 use function file_exists;
+use function is_dir;
+use function mkdir;
+use function sprintf;
 use function str_starts_with;
 
 class FluentVision
@@ -62,21 +69,23 @@ class FluentVision
 
     private bool $end2end = false;
 
-    private int $vidStride = 1;
+    private int $vidStride = 5;
 
-    private string $imagePath = '';
+    private string $mediaPath = '';
 
-    private string $videoPath = '';
+    private ?MediaType $mediaType = null;
 
-    private InferenceService $inferenceService;
+    private string $savePath = '';
 
-    private ModelService $modelService;
+    private InferenceServiceInterface $inferenceService;
+
+    private ModelServiceInterface $modelService;
 
     public function __construct(
         private readonly ?string $configPath = null,
         ?Config $config = null,
-        ?InferenceService $inferenceService = null,
-        ?ModelService $modelService = null,
+        ?InferenceServiceInterface $inferenceService = null,
+        ?ModelServiceInterface $modelService = null,
     ) {
         $this->config = $config ?? new Config($this->configPath);
         $this->provider = Provider::from($this->config->defaultProvider());
@@ -261,78 +270,89 @@ class FluentVision
         return $this;
     }
 
+    /**
+     * Alias for everyNframes()
+     * @param int $vidStride
+     * @return $this
+     */
     public function vidStride(int $vidStride): self
+    {
+        return $this->everyNframes($vidStride);
+    }
+
+    public function everyNframes(int $vidStride): self
     {
         $this->vidStride = $vidStride;
 
         return $this;
     }
 
-    public function image(string $path): self
+    /**
+     * Set the media input path. Media type is auto-detected from the file extension.
+     * Override auto-detection by passing an explicit MediaType.
+     */
+    public function media(string $path, ?MediaType $type = null): self
     {
-        $this->imagePath = $path;
+        $this->mediaPath = $path;
+        $this->mediaType = $type ?? MediaType::inferFromPath($path);
 
         return $this;
     }
 
-    public function video(string $path): self
+    public function savePath(string $path): self
     {
-        $this->videoPath = $path;
+        $this->savePath = $path;
 
         return $this;
     }
 
-    public function detect(): InferenceResult
+    /**
+     * @throws JsonException
+     */
+    public function detect(): InferenceResult|VideoInferenceResult
     {
-        if ($this->imagePath === '') {
-            throw new RuntimeException('No image path set. Call image() before detect().');
+        if ($this->mediaPath === '') {
+            throw new RuntimeException('No media path set. Call media() before detect().');
         }
 
         $this->autoInferProvider();
         $resolvedModel = $this->resolveModel();
 
-        return $this->inferenceService->detectImage(
+        return $this->inferenceService->detect(
             providerType: $this->provider,
-            imagePath: $this->imagePath,
+            mediaPath: $this->mediaPath,
+            mediaType: $this->resolveMediaType(),
             model: $resolvedModel,
             device: $this->device,
             options: $this->buildOptions(),
         );
     }
 
-    public function detectVideo(): VideoInferenceResult
-    {
-        if ($this->videoPath === '') {
-            throw new RuntimeException('No video path set. Call video() before detectVideo().');
-        }
-
-        $this->autoInferProvider();
-        $resolvedModel = $this->resolveModel();
-
-        return $this->inferenceService->detectVideo(
-            providerType: $this->provider,
-            videoPath: $this->videoPath,
-            model: $resolvedModel,
-            device: $this->device,
-            options: $this->buildOptions(),
-        );
-    }
-
+    /**
+     * @throws JsonException
+     */
     public function annotate(): AnnotatedResult
     {
-        if ($this->imagePath === '') {
-            throw new RuntimeException('No image path set. Call image() before annotate().');
+        if ($this->mediaPath === '') {
+            throw new RuntimeException('No media path set. Call media() before annotate().');
         }
 
         $this->autoInferProvider();
         $resolvedModel = $this->resolveModel();
+        $resolvedSavePath = $this->resolveSavePath();
+        $this->validateAndEnsurePath($resolvedSavePath);
 
-        return $this->inferenceService->annotateImage(
+        $options = $this->buildOptions();
+        $options['save'] = true;
+        $options['save_path'] = $resolvedSavePath;
+
+        return $this->inferenceService->annotate(
             providerType: $this->provider,
-            imagePath: $this->imagePath,
+            mediaPath: $this->mediaPath,
+            mediaType: $this->resolveMediaType(),
             model: $resolvedModel,
             device: $this->device,
-            options: $this->buildOptions(),
+            options: $options,
         );
     }
 
@@ -351,9 +371,24 @@ class FluentVision
         return $this->model;
     }
 
+    public function getMediaType(): ?MediaType
+    {
+        return $this->mediaType;
+    }
+
+    public function getSavePath(): string
+    {
+        return $this->resolveSavePath();
+    }
+
     public function getConfig(): Config
     {
         return $this->config;
+    }
+
+    private function resolveMediaType(): MediaType
+    {
+        return $this->mediaType ?? MediaType::inferFromPath($this->mediaPath);
     }
 
     private function resolveModel(): string
@@ -469,6 +504,36 @@ class FluentVision
             return $this->modelService->resolveNanodetModel($nanodetModel);
         } catch (Throwable) {
             return null;
+        }
+    }
+
+    private function resolveSavePath(): string
+    {
+        if ($this->savePath !== '') {
+            if (str_starts_with($this->savePath, '/')) {
+                return $this->savePath;
+            }
+
+            return getcwd().'/'.$this->savePath;
+        }
+
+        $configPath = $this->config->savePath();
+
+        if (str_starts_with($configPath, '/')) {
+            return $configPath;
+        }
+
+        return getcwd().'/'.$configPath;
+    }
+
+    private function validateAndEnsurePath(string $path): void
+    {
+        if (is_dir($path)) {
+            return;
+        }
+
+        if (! mkdir($path, 0755, true) && ! is_dir($path)) {
+            throw new RuntimeException(sprintf('Output directory "%s" could not be created.', $path));
         }
     }
 }

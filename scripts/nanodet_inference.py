@@ -21,6 +21,7 @@ def parse_args():
     parser.add_argument("--nanodet-path", type=str, default="", help="Path to nanodet repo")
     parser.add_argument("--vid-stride", type=int, default=1, help="Video frame stride")
     parser.add_argument("--save", action="store_true", help="Save annotated image/video")
+    parser.add_argument("--save-path", type=str, default=None, help="Directory to save annotated output")
     return parser.parse_args()
 
 
@@ -126,9 +127,15 @@ def run_image_inference(args):
                 2,
             )
 
-        annotated_path = str(Path(args.image).with_stem(Path(args.image).stem + "_annotated"))
+        if args.save_path:
+            out_dir = Path(args.save_path)
+            out_dir.mkdir(parents=True, exist_ok=True)
+            annotated_path = str(out_dir / (Path(args.image).stem + "_annotated" + Path(args.image).suffix))
+        else:
+            annotated_path = str(Path(args.image).with_stem(Path(args.image).stem + "_annotated"))
+
         cv2.imwrite(annotated_path, annotated)
-        output["annotated_path"] = annotated_path
+        output["annotated_path"] = str(Path(annotated_path).resolve())
 
     return output
 

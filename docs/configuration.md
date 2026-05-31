@@ -97,7 +97,7 @@ Config defaults can be overridden at runtime via the fluent API. Fluent API call
 // Config says conf=0.25, but this uses 0.5
 FluentVision::make()
     ->conf(0.5)
-    ->image('photo.jpg')
+    ->media('photo.jpg')
     ->detect();
 ```
 

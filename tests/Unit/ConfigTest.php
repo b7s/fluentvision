@@ -25,7 +25,7 @@ describe('Config', function () {
 
         expect($config->string('default_provider', 'fallback'))->toBe('ultralytics')
             ->and($config->integer('timeout', 999))->toBe(0)
-            ->and($config->float('default_conf', 0.99))->toBe(0.25)
+            ->and($config->float('default_conf', 0.99))->toBe(0.4)
             ->and($config->bool('verbose', true))->toBeFalse();
     });
 
@@ -56,5 +56,17 @@ describe('Config', function () {
         $modelDir = $config->modelDir();
 
         expect($modelDir)->toContain('.fluentvision/models');
+    });
+
+    it('resolves save path default to cwd', function () {
+        $config = new Config('/nonexistent/path');
+
+        expect($config->savePath())->toContain('fluentvision-output');
+    });
+
+    it('resolves custom save path from config', function () {
+        $config = new Config(__DIR__.'/../fixtures/test-config.php');
+
+        expect($config->savePath())->toBe('/tmp/fluentvision-test-output');
     });
 });

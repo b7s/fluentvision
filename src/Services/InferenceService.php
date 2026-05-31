@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace B7s\FluentVision\Services;
 
 use B7s\FluentVision\Enums\Device;
+use B7s\FluentVision\Enums\MediaType;
 use B7s\FluentVision\Enums\Provider;
 use B7s\FluentVision\Exceptions\InferenceException;
 use B7s\FluentVision\Results\AnnotatedResult;
@@ -23,7 +24,7 @@ use function is_int;
 use function is_string;
 use function json_decode;
 
-readonly class InferenceService
+readonly class InferenceService implements InferenceServiceInterface
 {
     public function __construct(
         private PythonService $pythonService,
@@ -32,56 +33,48 @@ readonly class InferenceService
 
     /**
      * @param  array<string, mixed>  $options
+     *
+     * @throws JsonException
      */
-    public function detectImage(
+    public function detect(
         Provider $providerType,
-        string $imagePath,
+        string $mediaPath,
+        MediaType $mediaType,
         string $model,
         Device $device,
         array $options = [],
-    ): InferenceResult {
+    ): InferenceResult|VideoInferenceResult {
         $provider = $this->providerFactory->make($providerType);
-        $arguments = $provider->buildArguments($imagePath, $model, $device, $options);
+
+        if ($mediaType->isVideo() && ! $provider->supportsVideo()) {
+            throw InferenceException::fromMessage('Provider does not support video inference');
+        }
+
+        $arguments = $provider->buildArguments($mediaPath, $mediaType, $model, $device, $options);
         $output = $this->pythonService->executeScript($provider->scriptPath(), $arguments);
+
+        if ($mediaType->isVideo()) {
+            return $this->parseVideoOutput($output, $provider);
+        }
 
         return $this->parseImageOutput($output, $provider);
     }
 
     /**
      * @param  array<string, mixed>  $options
+     *
+     * @throws JsonException
      */
-    public function detectVideo(
+    public function annotate(
         Provider $providerType,
-        string $videoPath,
-        string $model,
-        Device $device,
-        array $options = [],
-    ): VideoInferenceResult {
-        $provider = $this->providerFactory->make($providerType);
-
-        if (! $provider->supportsVideo()) {
-            throw InferenceException::fromMessage('Provider does not support video inference');
-        }
-
-        $arguments = $provider->buildVideoArguments($videoPath, $model, $device, $options);
-        $output = $this->pythonService->executeScript($provider->scriptPath(), $arguments);
-
-        return $this->parseVideoOutput($output, $provider);
-    }
-
-    /**
-     * @param  array<string, mixed>  $options
-     */
-    public function annotateImage(
-        Provider $providerType,
-        string $imagePath,
+        string $mediaPath,
+        MediaType $mediaType,
         string $model,
         Device $device,
         array $options = [],
     ): AnnotatedResult {
         $provider = $this->providerFactory->make($providerType);
-        $options['save'] = true;
-        $arguments = $provider->buildArguments($imagePath, $model, $device, $options);
+        $arguments = $provider->buildArguments($mediaPath, $mediaType, $model, $device, $options);
         $output = $this->pythonService->executeScript($provider->scriptPath(), $arguments);
 
         return $this->parseAnnotatedOutput($output, $provider);
