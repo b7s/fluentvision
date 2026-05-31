@@ -11,8 +11,8 @@ use B7s\FluentVision\Exceptions\InferenceException;
 use B7s\FluentVision\Results\AnnotatedResult;
 use B7s\FluentVision\Results\DetectionResult;
 use B7s\FluentVision\Results\InferenceResult;
+use B7s\FluentVision\Results\ProcessResult;
 use B7s\FluentVision\Results\VideoInferenceResult;
-use B7s\FluentVision\Services\Providers\ProviderContract;
 use B7s\FluentVision\Services\Providers\ProviderFactory;
 use B7s\FluentVision\Support\ArrayNarrower;
 use JsonException;
@@ -44,20 +44,13 @@ readonly class InferenceService implements InferenceServiceInterface
         Device $device,
         array $options = [],
     ): InferenceResult|VideoInferenceResult {
-        $provider = $this->providerFactory->make($providerType);
-
-        if ($mediaType->isVideo() && ! $provider->supportsVideo()) {
-            throw InferenceException::fromMessage('Provider does not support video inference');
-        }
-
-        $arguments = $provider->buildArguments($mediaPath, $mediaType, $model, $device, $options);
-        $output = $this->pythonService->executeScript($provider->scriptPath(), $arguments);
+        $data = $this->runInference($providerType, $mediaPath, $mediaType, $model, $device, $options);
 
         if ($mediaType->isVideo()) {
-            return $this->parseVideoOutput($output, $provider);
+            return $this->buildVideoResult($data, $providerType);
         }
 
-        return $this->parseImageOutput($output, $provider);
+        return $this->buildImageResult($data, $providerType);
     }
 
     /**
@@ -73,19 +66,72 @@ readonly class InferenceService implements InferenceServiceInterface
         Device $device,
         array $options = [],
     ): AnnotatedResult {
-        $provider = $this->providerFactory->make($providerType);
-        $arguments = $provider->buildArguments($mediaPath, $mediaType, $model, $device, $options);
-        $output = $this->pythonService->executeScript($provider->scriptPath(), $arguments);
+        $data = $this->runInference($providerType, $mediaPath, $mediaType, $model, $device, $options);
 
-        return $this->parseAnnotatedOutput($output, $provider);
+        return $this->buildAnnotatedResult($data, $providerType);
     }
 
     /**
+     * @param  array<string, mixed>  $options
+     *
      * @throws JsonException
      */
-    private function parseImageOutput(string $output, ProviderContract $provider): InferenceResult
+    public function detectAndAnnotate(
+        Provider $providerType,
+        string $mediaPath,
+        MediaType $mediaType,
+        string $model,
+        Device $device,
+        array $options = [],
+    ): ProcessResult {
+        $data = $this->runInference($providerType, $mediaPath, $mediaType, $model, $device, $options);
+
+        if ($mediaType->isVideo()) {
+            $inferenceResult = $this->buildVideoResult($data, $providerType);
+        } else {
+            $inferenceResult = $this->buildImageResult($data, $providerType);
+        }
+
+        $annotatedResult = $this->buildAnnotatedResult($data, $providerType);
+
+        return new ProcessResult(
+            detections: $inferenceResult,
+            annotation: $annotatedResult,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>
+     *
+     * @throws JsonException
+     */
+    private function runInference(
+        Provider $providerType,
+        string $mediaPath,
+        MediaType $mediaType,
+        string $model,
+        Device $device,
+        array $options,
+    ): array {
+        $provider = $this->providerFactory->make($providerType);
+
+        if ($mediaType->isVideo() && ! $provider->supportsVideo()) {
+            throw InferenceException::fromMessage('Provider does not support video inference');
+        }
+
+        $arguments = $provider->buildArguments($mediaPath, $mediaType, $model, $device, $options);
+        $output = $this->pythonService->executeScript($provider->scriptPath(), $arguments);
+
+        return $this->decodeJson($output);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function buildImageResult(array $data, Provider $providerType): InferenceResult
     {
-        $data = $this->decodeJson($output);
+        $provider = $this->providerFactory->make($providerType);
         $rawDetections = $data['detections'] ?? [];
         $detections = $this->parseDetections(ArrayNarrower::narrowToArrayOfAssoc($rawDetections));
 
@@ -102,11 +148,11 @@ readonly class InferenceService implements InferenceServiceInterface
     }
 
     /**
-     * @throws JsonException
+     * @param  array<string, mixed>  $data
      */
-    private function parseVideoOutput(string $output, ProviderContract $provider): VideoInferenceResult
+    private function buildVideoResult(array $data, Provider $providerType): VideoInferenceResult
     {
-        $data = $this->decodeJson($output);
+        $provider = $this->providerFactory->make($providerType);
         $providerName = $provider->name();
         $modelName = is_string($data['model'] ?? '') ? $data['model'] : '';
         $rawFrames = $data['frames'] ?? [];
@@ -151,12 +197,12 @@ readonly class InferenceService implements InferenceServiceInterface
     }
 
     /**
-     * @throws JsonException
+     * @param  array<string, mixed>  $data
      */
-    private function parseAnnotatedOutput(string $output, ProviderContract $provider): AnnotatedResult
+    private function buildAnnotatedResult(array $data, Provider $providerType): AnnotatedResult
     {
-        $data = $this->decodeJson($output);
-        $imagePath = $data['image_path'] ?? '';
+        $provider = $this->providerFactory->make($providerType);
+        $imagePath = $data['image_path'] ?? $data['video_path'] ?? '';
         $annotatedPath = $data['annotated_path'] ?? '';
         $model = $data['model'] ?? '';
         $detectionCount = $data['detection_count'] ?? 0;

@@ -10,11 +10,11 @@ Returned by `->detect()` when processing image input.
 readonly class InferenceResult
 {
     public function __construct(
-        public array $detections,
         public string $imagePath,
+        public string $provider,
         public string $model,
+        public array $detections,
         public float $inferenceTime,
-        public Device $device,
     ) {}
 }
 ```
@@ -65,16 +65,15 @@ $result->toJson(JSON_PRETTY_PRINT);  // string — pretty-printed JSON
 ```php
 $result = InferenceResult::fromArray([
     'image_path' => 'photo.jpg',
+    'provider' => 'ultralytics',
     'model' => 'yolo26s.pt',
     'inference_time' => 45.2,
-    'device' => 'cpu',
-    'detections' => [
-        [
-            'class' => 'person',
-            'confidence' => 0.92,
-            'box' => ['x1' => 10, 'y1' => 20, 'x2' => 100, 'y2' => 300],
-        ],
-    ],
+], [
+    DetectionResult::fromArray([
+        'class' => 'person',
+        'confidence' => 0.92,
+        'box' => ['x1' => 10, 'y1' => 20, 'x2' => 100, 'y2' => 300],
+    ]),
 ]);
 ```
 
@@ -159,10 +158,11 @@ Returned by `->detect()` when processing video input.
 readonly class VideoInferenceResult
 {
     public function __construct(
-        public array $frames,
         public string $videoPath,
+        public string $provider,
         public string $model,
-        public Device $device,
+        public array $frames,
+        public float $totalInferenceTime,
     ) {}
 }
 ```
@@ -196,17 +196,17 @@ foreach ($result->frames as $frameResult) {
 
 ## AnnotatedResult
 
-Returned by `->annotate()`.
+Returned by `->annotate()`. Also available as the `annotation` property of `ProcessResult`.
 
 ```php
 readonly class AnnotatedResult
 {
     public function __construct(
+        public string $imagePath,
         public string $annotatedPath,
-        public int $detectionCount,
+        public string $provider,
         public string $model,
-        public float $inferenceTime,
-        public Device $device,
+        public int $detectionCount,
     ) {}
 }
 ```
@@ -227,6 +227,62 @@ if ($result->hasAnnotatedImage()) {
     echo "Saved to: {$result->annotatedPath}\n";
     echo "Detections drawn: {$result->detectionCount}\n";
 }
+```
+
+## ProcessResult
+
+Returned by `->process()`. Combines detection results and annotation in a single object — produced by a single inference run.
+
+```php
+readonly class ProcessResult
+{
+    public function __construct(
+        public InferenceResult|VideoInferenceResult $detections,
+        public AnnotatedResult $annotation,
+    ) {}
+}
+```
+
+### Methods
+
+| Method | Return | Description |
+|--------|--------|-------------|
+| `hasAnnotatedImage()` | bool | Whether the annotated file exists on disk |
+| `getDetectionCount()` | int | Number of detections (total across frames for video) |
+| `getAnnotatedPath()` | string | Path to the annotated image/video |
+| `toArray()` | array | Full structured output |
+| `toJson(int $flags = 0)` | string | Compact JSON |
+| `fromArray(array $data)` | self | Create from raw data |
+
+```php
+use B7s\FluentVision\Results\ProcessResult;
+
+$result = FluentVision::make()
+    ->media('photo.jpg')
+    ->withDetections()
+    ->withAnnotation()
+    ->process();
+
+echo "Detections: " . $result->getDetectionCount() . "\n";
+echo "Annotated: " . $result->getAnnotatedPath() . "\n";
+
+// Access individual parts
+$detections = $result->detections;  // InferenceResult or VideoInferenceResult
+$annotation = $result->annotation;  // AnnotatedResult
+
+// For image input
+foreach ($result->detections->detections as $d) {
+    echo $d->class . ": " . ($d->confidence * 100) . "%\n";
+}
+
+// For video input
+if ($result->detections instanceof VideoInferenceResult) {
+    echo "Frames: " . $result->detections->getFrameCount() . "\n";
+}
+
+// Serialize
+$data = $result->toArray();
+$json = $result->toJson();
 ```
 
 ## Common Patterns

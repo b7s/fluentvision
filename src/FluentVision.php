@@ -12,6 +12,7 @@ use B7s\FluentVision\Enums\YoloModel;
 use B7s\FluentVision\Enums\YoloTask;
 use B7s\FluentVision\Results\AnnotatedResult;
 use B7s\FluentVision\Results\InferenceResult;
+use B7s\FluentVision\Results\ProcessResult;
 use B7s\FluentVision\Results\VideoInferenceResult;
 use B7s\FluentVision\Services\InferenceService;
 use B7s\FluentVision\Services\InferenceServiceInterface;
@@ -76,6 +77,10 @@ class FluentVision
     private ?MediaType $mediaType = null;
 
     private string $savePath = '';
+
+    private bool $wantsDetections = true;
+
+    private bool $wantsAnnotation = false;
 
     private InferenceServiceInterface $inferenceService;
 
@@ -270,21 +275,16 @@ class FluentVision
         return $this;
     }
 
-    /**
-     * Alias for everyNframes()
-     * @param int $vidStride
-     * @return $this
-     */
     public function vidStride(int $vidStride): self
-    {
-        return $this->everyNframes($vidStride);
-    }
-
-    public function everyNframes(int $vidStride): self
     {
         $this->vidStride = $vidStride;
 
         return $this;
+    }
+
+    public function everyNframes(int $vidStride): self
+    {
+        return $this->vidStride($vidStride);
     }
 
     /**
@@ -302,6 +302,20 @@ class FluentVision
     public function savePath(string $path): self
     {
         $this->savePath = $path;
+
+        return $this;
+    }
+
+    public function withDetections(bool $enabled = true): self
+    {
+        $this->wantsDetections = $enabled;
+
+        return $this;
+    }
+
+    public function withAnnotation(bool $enabled = true): self
+    {
+        $this->wantsAnnotation = $enabled;
 
         return $this;
     }
@@ -347,6 +361,38 @@ class FluentVision
         $options['save_path'] = $resolvedSavePath;
 
         return $this->inferenceService->annotate(
+            providerType: $this->provider,
+            mediaPath: $this->mediaPath,
+            mediaType: $this->resolveMediaType(),
+            model: $resolvedModel,
+            device: $this->device,
+            options: $options,
+        );
+    }
+
+    /**
+     * @throws JsonException
+     */
+    public function process(): ProcessResult
+    {
+        if ($this->mediaPath === '') {
+            throw new RuntimeException('No media path set. Call media() before process().');
+        }
+
+        if (! $this->wantsDetections && ! $this->wantsAnnotation) {
+            throw new RuntimeException('At least one of withDetections() or withAnnotation() must be enabled.');
+        }
+
+        $this->autoInferProvider();
+        $resolvedModel = $this->resolveModel();
+        $resolvedSavePath = $this->resolveSavePath();
+        $this->validateAndEnsurePath($resolvedSavePath);
+
+        $options = $this->buildOptions();
+        $options['save'] = $this->wantsAnnotation;
+        $options['save_path'] = $resolvedSavePath;
+
+        return $this->inferenceService->detectAndAnnotate(
             providerType: $this->provider,
             mediaPath: $this->mediaPath,
             mediaType: $this->resolveMediaType(),

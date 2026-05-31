@@ -179,11 +179,13 @@ FluentVision::make()
     ->iou(0.45) // IoU threshold (NMS)
     ->imgsz(640) // inference image size
     ->maxDet(100) // max detections per image
-    ->classes(['person', 'car']) // filter to specific classes
-    ->prompts(['person wearing red', 'hard hat']) // YOLOE text prompts
-    ->augment() // test-time augmentation
-    ->half() // FP16 inference (GPU)
-    ->detect();
+ ->classes(['person', 'car']) // filter to specific classes
+ ->prompts(['person wearing red', 'hard hat']) // YOLOE text prompts
+ ->augment() // test-time augmentation
+ ->half() // FP16 inference (GPU)
+ ->withDetections() // include detection data (default: true)
+ ->withAnnotation() // include annotated image (default: false)
+ ->process(); // returns ProcessResult with both
 ```
 
 ### Image Detection
@@ -216,6 +218,29 @@ $result = FluentVision::make()
 
 echo "Annotated image saved to: " . $result->annotatedPath . "\n";
 ```
+
+### Detect + Annotate in One Call
+
+Use `process()` to get both detections and an annotated image in a single inference run:
+
+```php
+use B7s\FluentVision\Results\ProcessResult;
+
+$result = FluentVision::make()
+    ->media('photo.jpg')
+    ->withDetections()       // include detection data (default: true)
+    ->withAnnotation()       // include annotated image (default: false)
+    ->process();             // returns ProcessResult
+
+echo "Detections: " . $result->getDetectionCount() . "\n";
+echo "Annotated: " . $result->getAnnotatedPath() . "\n";
+
+// Access the individual results
+$detections = $result->detections;  // InferenceResult|VideoInferenceResult
+$annotation = $result->annotation;  // AnnotatedResult
+```
+
+`process()` runs inference **once** — more efficient than calling `detect()` and `annotate()` separately.
 
 ### Working with Results
 
@@ -345,7 +370,7 @@ vendor/bin/fluentvision install --config=/path/to/config.php
 - [Usage Guide](docs/usage.md) — complete fluent API reference
 - [Providers](docs/providers.md) — Ultralytics vs NanoDet details
 - [Custom Models](docs/custom-models.md) — using your own trained models
-- [Result Objects](docs/results.md) — InferenceResult, DetectionResult, BoundingBox API
+- [Result Objects](docs/results.md) — InferenceResult, ProcessResult, DetectionResult, BoundingBox API
 - [CLI Commands](docs/cli.md) — install, doctor, and options
 
 ## License

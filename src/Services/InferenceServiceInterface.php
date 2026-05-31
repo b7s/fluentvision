@@ -9,6 +9,7 @@ use B7s\FluentVision\Enums\MediaType;
 use B7s\FluentVision\Enums\Provider;
 use B7s\FluentVision\Results\AnnotatedResult;
 use B7s\FluentVision\Results\InferenceResult;
+use B7s\FluentVision\Results\ProcessResult;
 use B7s\FluentVision\Results\VideoInferenceResult;
 
 interface InferenceServiceInterface
@@ -36,4 +37,16 @@ interface InferenceServiceInterface
         Device $device,
         array $options = [],
     ): AnnotatedResult;
+
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    public function detectAndAnnotate(
+        Provider $providerType,
+        string $mediaPath,
+        MediaType $mediaType,
+        string $model,
+        Device $device,
+        array $options = [],
+    ): ProcessResult;
 }

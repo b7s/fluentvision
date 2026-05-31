@@ -155,6 +155,37 @@ $vision->media('data.raw', MediaType::Image);
 |--------|---------|-------------|
 | `detect()` | `InferenceResult \| VideoInferenceResult` | Run detection on image or video |
 | `annotate()` | `AnnotatedResult` | Run detection and save annotated output |
+| `process()` | `ProcessResult` | Run detection + annotation in a single call |
+
+### Process Flags
+
+| Method | Default | Description |
+|--------|---------|-------------|
+| `withDetections(bool $enabled = true)` | true | Include detection data in `process()` result |
+| `withAnnotation(bool $enabled = true)` | false | Include annotated image in `process()` result |
+
+```php
+use B7s\FluentVision\Results\ProcessResult;
+
+// Both detections + annotation (single inference run)
+$result = FluentVision::make()
+    ->media('photo.jpg')
+    ->withDetections()      // default: true
+    ->withAnnotation()      // default: false — opt in
+    ->process();
+
+echo $result->getDetectionCount() . " objects found\n";
+echo "Annotated: " . $result->getAnnotatedPath() . "\n";
+
+// Annotation only (skip detection data)
+$result = FluentVision::make()
+    ->media('photo.jpg')
+    ->withDetections(false)
+    ->withAnnotation()
+    ->process();
+```
+
+`process()` runs inference **once** — more efficient than calling `detect()` and `annotate()` separately.
 
 ## Complete Examples
 
@@ -295,7 +326,7 @@ $vision->getConfig();    // Config object
 
 ## Method Chaining
 
-All setter methods return `self` for fluent chaining. Only the terminal methods (`detect()`, `annotate()`) return result objects and break the chain.
+All setter methods return `self` for fluent chaining. Only the terminal methods (`detect()`, `annotate()`, `process()`) return result objects and break the chain.
 
 ```php
 // Build up configuration
