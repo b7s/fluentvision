@@ -138,7 +138,7 @@ $vision->everyNframes(5) // Process every 5th frame
 |--------|------|---------|-------------|
 | `media(string $source, ?MediaType $type = null)` | string, ?MediaType | — | Set stream source (RTSP, RTMP, HTTP, webcam) — type auto-detected |
 | `streamConfig(callable $onFrame, ?int $startAnnotateServerOnPort = null, int $maxFramesToProcess = 0)` | callable, ?int, int | —, null, 0 | Set per-frame callback + optional annotation server port + frame limit |
-| `annotateStream(?int $port)` | ?int | — | Fluent alias to enable annotation streaming |
+| `startAnnotateStreamServer(?int $port)` | ?int | — | Fluent alias to enable annotation streaming |
 | `withAnnotatedFrames(bool $enabled = true)` | bool | false | Include base64 annotated frame data in each stream InferenceResult |
 
 ```php

@@ -289,9 +289,9 @@ describe('FluentVision', function () {
         Mockery::close();
     });
 
-    it('sets annotateStream fluently and enables annotation', function () {
+    it('sets startAnnotateStreamServer fluently and enables annotation', function () {
         $fv = FluentVision::make();
-        $result = $fv->annotateStream(8765);
+        $result = $fv->startAnnotateStreamServer(8765);
 
         expect($result)->toBeInstanceOf(FluentVision::class);
     });
@@ -327,7 +327,7 @@ describe('FluentVision', function () {
             ->model(YoloModel::YOLO26s)
             ->useCpu()
             ->withAnnotation(true)
-            ->annotateStream(8765)
+            ->startAnnotateStreamServer(8765)
             ->streamConfig(static fn () => null)
             ->process();
 

@@ -405,7 +405,7 @@ class FluentVision
      * Open http://localhost:{port}/stream in any browser to view the annotated stream.
      * Alias for passing the port via streamConfig(callable, $port).
      */
-    public function annotateStream(?int $port): self
+    public function startAnnotateStreamServer(?int $port): self
     {
         $this->annotatePort = $port;
 

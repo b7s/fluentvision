@@ -80,13 +80,13 @@ The callback is invoked for every processed frame with the detection results, th
 ->streamConfig(function ($frame, $num, $result) { ... }, 8080, 100)               // Callback + annotation server + 100 frame limit
 ```
 
-### `annotateStream(?int $port): self`
+### `startAnnotateStreamServer(?int $port): self`
 
 Fluent alias to enable real-time annotation streaming. When called without a port, the annotation server uses a random port.
 
 ```php
-->annotateStream(8765) // Annotation server on port 8765
-->annotateStream(null) // Annotation server on random port
+->startAnnotateStreamServer(8765) // Annotation server on port 8765
+->startAnnotateStreamServer(null) // Annotation server on random port
 ```
 
 Equivalent to passing the port as the second argument to `streamConfig()`.
@@ -143,7 +143,7 @@ class StreamResult
 | `isStopped()` | bool | Whether the stream was stopped early (by `maxFramesToProcess` or `stopStream()`) |
 | `isRunning()` | bool | Whether the stream is currently processing |
 | `isStopRequested()` | bool | Whether `stopStream()` has been called |
-| `getStreamUrl()` | ?string | MJPEG annotation URL (when `annotateStream` enabled) |
+| `getStreamUrl()` | ?string | MJPEG annotation URL (when `startAnnotateStreamServer` enabled) |
 | `toArray()` | array | Full structured output |
 | `toJson(int $flags = 0)` | string | JSON output |
 | `fromArray(array $data, array $frames = [])` | self | Create from raw data |

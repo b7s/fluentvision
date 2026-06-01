@@ -320,7 +320,7 @@ class StreamResult
 | `isStopped()` | bool | Whether stopped by `maxFramesToProcess` limit or `stopStream()` |
 | `isRunning()` | bool | Whether the stream is currently processing |
 | `isStopRequested()` | bool | Whether `stopStream()` has been called |
-| `getStreamUrl()` | ?string | MJPEG annotation URL (when `annotateStream` enabled) |
+| `getStreamUrl()` | ?string | MJPEG annotation URL (when `startAnnotateStreamServer` enabled) |
 | `toArray()` | array | Full structured output |
 | `toJson(int $flags = 0)` | string | JSON output |
 | `fromArray(array $data, array $frames = [])` | self | Create from raw data |
@@ -339,7 +339,7 @@ $result->getFrameCount(); // 100
 $result->getTotalDetections(); // 247
 $result->getTotalTime(); // 12.345 (seconds)
 $result->isStopped(); // true (stopped by maxFramesToProcess)
-$result->getStreamUrl(); // 'http://0.0.0.0:8080' (if annotateStream enabled)
+$result->getStreamUrl(); // 'http://0.0.0.0:8080' (if startAnnotateStreamServer enabled)
 
 // Per-frame access
 foreach ($result->getFrames() as $frameResult) {
