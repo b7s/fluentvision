@@ -6,11 +6,14 @@ use B7s\FluentVision\Enums\Device;
 use B7s\FluentVision\Enums\MediaType;
 use B7s\FluentVision\Enums\NanodetModel;
 use B7s\FluentVision\Enums\Provider;
+use B7s\FluentVision\Enums\UltralyticsSolution;
 use B7s\FluentVision\Enums\YoloModel;
 use B7s\FluentVision\FluentVision;
+use B7s\FluentVision\Results\SolutionResult;
 use B7s\FluentVision\Results\StreamResult;
 use B7s\FluentVision\Services\InferenceServiceInterface;
 use B7s\FluentVision\Services\ModelServiceInterface;
+use B7s\FluentVision\Services\SolutionServiceInterface;
 use B7s\FluentVision\Services\StreamServiceInterface;
 
 describe('FluentVision', function () {
@@ -406,6 +409,165 @@ describe('FluentVision', function () {
             ->process();
 
         expect($result)->toBe($expectedResult);
+
+        Mockery::close();
+    });
+
+    it('sets solution fluently', function () {
+        $fv = FluentVision::make();
+        $result = $fv->solution(UltralyticsSolution::Count);
+
+        expect($result)->toBeInstanceOf(FluentVision::class);
+    });
+
+    it('sets solution with extra params fluently', function () {
+        $fv = FluentVision::make();
+        $result = $fv->solution(UltralyticsSolution::Heatmap, ['region' => '0,0,100,100,200,200,0,200']);
+
+        expect($result)->toBeInstanceOf(FluentVision::class);
+    });
+
+    it('delegates solution to SolutionServiceInterface via process', function () {
+        $expectedResult = new SolutionResult(
+            solution: 'count',
+            source: '/tmp/video.mp4',
+            model: 'yolo26s.pt',
+            provider: 'ultralytics',
+            frameCount: 100,
+            totalTime: 10.0,
+            inCount: 15,
+            outCount: 12,
+        );
+
+        $inferenceService = Mockery::mock(InferenceServiceInterface::class);
+        $modelService = Mockery::mock(ModelServiceInterface::class);
+        $modelService->shouldReceive('resolveUltralyticsModel')->andReturn('/home/user/.fluentvision/models/yolo26s.pt');
+
+        $solutionService = Mockery::mock(SolutionServiceInterface::class);
+        $solutionService->shouldReceive('run')
+            ->once()
+            ->withArgs(function (UltralyticsSolution $s, string $src, string $m, Device $d, array $opts) {
+                return $s === UltralyticsSolution::Count
+                    && $src === '/tmp/video.mp4'
+                    && $m === '/home/user/.fluentvision/models/yolo26s.pt';
+            })
+            ->andReturn($expectedResult);
+
+        $fv = new FluentVision(
+            inferenceService: $inferenceService,
+            modelService: $modelService,
+            solutionService: $solutionService,
+        );
+
+        $result = $fv->media('/tmp/video.mp4')
+            ->model(YoloModel::YOLO26s)
+            ->useCpu()
+            ->solution(UltralyticsSolution::Count)
+            ->process();
+
+        expect($result)->toBe($expectedResult)
+            ->and($result->inCount)->toBe(15);
+
+        Mockery::close();
+    });
+
+    it('passes solution params and common options to SolutionService', function () {
+        $expectedResult = new SolutionResult(
+            solution: 'heatmap',
+            source: '/tmp/video.mp4',
+            model: 'yolo26s.pt',
+            provider: 'ultralytics',
+        );
+
+        $inferenceService = Mockery::mock(InferenceServiceInterface::class);
+        $modelService = Mockery::mock(ModelServiceInterface::class);
+        $modelService->shouldReceive('resolveUltralyticsModel')->andReturn('/home/user/.fluentvision/models/yolo26s.pt');
+
+        $solutionService = Mockery::mock(SolutionServiceInterface::class);
+        $solutionService->shouldReceive('run')
+            ->once()
+            ->withArgs(function (UltralyticsSolution $s, string $src, string $m, Device $d, array $opts) {
+                return $s === UltralyticsSolution::Heatmap
+                    && isset($opts['region']) && $opts['region'] === '0,0,100,100'
+                    && isset($opts['conf']) && $opts['conf'] === 0.5;
+            })
+            ->andReturn($expectedResult);
+
+        $fv = new FluentVision(
+            inferenceService: $inferenceService,
+            modelService: $modelService,
+            solutionService: $solutionService,
+        );
+
+        $result = $fv->media('/tmp/video.mp4')
+            ->model(YoloModel::YOLO26s)
+            ->useCpu()
+            ->confidence(0.5)
+            ->solution(UltralyticsSolution::Heatmap, ['region' => '0,0,100,100'])
+            ->process();
+
+        expect($result)->toBe($expectedResult);
+
+        Mockery::close();
+    });
+
+    it('throws when solution called with Nanodet provider', function () {
+        $inferenceService = Mockery::mock(InferenceServiceInterface::class);
+        $modelService = Mockery::mock(ModelServiceInterface::class);
+        $solutionService = Mockery::mock(SolutionServiceInterface::class);
+
+        $fv = new FluentVision(
+            inferenceService: $inferenceService,
+            modelService: $modelService,
+            solutionService: $solutionService,
+        );
+
+        $fv->media('/tmp/video.mp4')
+            ->useNanodet()
+            ->model(NanodetModel::PlusM416)
+            ->solution(UltralyticsSolution::Count);
+
+        expect(fn () => $fv->process())->toThrow(RuntimeException::class, 'Solutions are only available with the Ultralytics provider.');
+
+        Mockery::close();
+    });
+
+    it('passes save option when withAnnotation enabled on solution', function () {
+        $expectedResult = new SolutionResult(
+            solution: 'count',
+            source: '/tmp/video.mp4',
+            model: 'yolo26s.pt',
+            provider: 'ultralytics',
+            annotatedPath: '/tmp/output/annotated.mp4',
+        );
+
+        $inferenceService = Mockery::mock(InferenceServiceInterface::class);
+        $modelService = Mockery::mock(ModelServiceInterface::class);
+        $modelService->shouldReceive('resolveUltralyticsModel')->andReturn('/home/user/.fluentvision/models/yolo26s.pt');
+
+        $solutionService = Mockery::mock(SolutionServiceInterface::class);
+        $solutionService->shouldReceive('run')
+            ->once()
+            ->withArgs(function (UltralyticsSolution $s, string $src, string $m, Device $d, array $opts) {
+                return isset($opts['save']) && $opts['save'] === true
+                    && isset($opts['save_path']);
+            })
+            ->andReturn($expectedResult);
+
+        $fv = new FluentVision(
+            inferenceService: $inferenceService,
+            modelService: $modelService,
+            solutionService: $solutionService,
+        );
+
+        $result = $fv->media('/tmp/video.mp4')
+            ->model(YoloModel::YOLO26s)
+            ->useCpu()
+            ->withAnnotation(true)
+            ->solution(UltralyticsSolution::Count)
+            ->process();
+
+        expect($result->hasAnnotation())->toBeTrue();
 
         Mockery::close();
     });

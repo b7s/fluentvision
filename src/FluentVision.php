@@ -8,11 +8,13 @@ use B7s\FluentVision\Enums\Device;
 use B7s\FluentVision\Enums\MediaType;
 use B7s\FluentVision\Enums\NanodetModel;
 use B7s\FluentVision\Enums\Provider;
+use B7s\FluentVision\Enums\UltralyticsSolution;
 use B7s\FluentVision\Enums\YoloModel;
 use B7s\FluentVision\Enums\YoloTask;
 use B7s\FluentVision\Results\AnnotatedResult;
 use B7s\FluentVision\Results\InferenceResult;
 use B7s\FluentVision\Results\ProcessResult;
+use B7s\FluentVision\Results\SolutionResult;
 use B7s\FluentVision\Results\StreamResult;
 use B7s\FluentVision\Results\VideoInferenceResult;
 use B7s\FluentVision\Services\InferenceService;
@@ -21,6 +23,8 @@ use B7s\FluentVision\Services\ModelService;
 use B7s\FluentVision\Services\ModelServiceInterface;
 use B7s\FluentVision\Services\Providers\ProviderFactory;
 use B7s\FluentVision\Services\PythonService;
+use B7s\FluentVision\Services\SolutionService;
+use B7s\FluentVision\Services\SolutionServiceInterface;
 use B7s\FluentVision\Services\StreamService;
 use B7s\FluentVision\Services\StreamServiceInterface;
 use JsonException;
@@ -102,12 +106,20 @@ class FluentVision
 
     private StreamServiceInterface $streamService;
 
+    private SolutionServiceInterface $solutionService;
+
+    private ?UltralyticsSolution $selectedSolution = null;
+
+    /** @var array<string, mixed> */
+    private array $solutionParams = [];
+
     public function __construct(
         private readonly ?string $configPath = null,
         ?Config $config = null,
         ?InferenceServiceInterface $inferenceService = null,
         ?ModelServiceInterface $modelService = null,
         ?StreamServiceInterface $streamService = null,
+        ?SolutionServiceInterface $solutionService = null,
     ) {
         $this->config = $config ?? new Config($this->configPath);
         $this->provider = Provider::from($this->config->defaultProvider());
@@ -132,6 +144,7 @@ class FluentVision
             nanodetRepoPath: $this->config->nanodetRepoPath(),
         );
         $this->streamService = $streamService ?? new StreamService($pythonService, $providerFactory);
+        $this->solutionService = $solutionService ?? new SolutionService($pythonService);
     }
 
     public static function make(?string $configPath = null): self
@@ -143,6 +156,22 @@ class FluentVision
     {
         $this->provider = $provider;
         $this->providerExplicitlySet = true;
+
+        return $this;
+    }
+
+    /**
+     * Select an Ultralytics solution to run with optional parameters.
+     *
+     * Solutions are Ultralytics-only built-in features like object counting,
+     * heatmaps, speed estimation, etc. See UltralyticsSolution enum for all options.
+     *
+     * @param  array<string, mixed>  $params  Solution-specific parameters
+     */
+    public function solution(UltralyticsSolution $solution, array $params = []): self
+    {
+        $this->selectedSolution = $solution;
+        $this->solutionParams = $params;
 
         return $this;
     }
@@ -440,10 +469,14 @@ class FluentVision
     /**
      * @throws JsonException
      */
-    public function process(): ProcessResult|StreamResult
+    public function process(): ProcessResult|StreamResult|SolutionResult
     {
         if ($this->mediaPath === '') {
             throw new RuntimeException('No media path set. Call media() before process().');
+        }
+
+        if ($this->selectedSolution !== null) {
+            return $this->runSolution();
         }
 
         $mediaType = $this->resolveMediaType();
@@ -515,6 +548,57 @@ class FluentVision
             model: $resolvedModel,
             device: $this->device,
             onFrame: $onFrame,
+            options: $options,
+        );
+    }
+
+    /**
+     * @throws JsonException
+     */
+    private function runSolution(): SolutionResult
+    {
+        if ($this->selectedSolution === null) {
+            throw new RuntimeException('No solution selected. Call solution() before process().');
+        }
+
+        $solution = $this->selectedSolution;
+        $this->autoInferProvider();
+
+        if (! $this->provider->isUltralytics()) {
+            throw new RuntimeException('Solutions are only available with the Ultralytics provider.');
+        }
+
+        $resolvedModel = $this->resolveModel();
+        $options = $this->solutionParams;
+
+        if ($this->conf > 0) {
+            $options['conf'] = $this->conf;
+        }
+
+        if ($this->iou > 0) {
+            $options['iou'] = $this->iou;
+        }
+
+        if ($this->imgsz > 0) {
+            $options['imgsz'] = $this->imgsz;
+        }
+
+        if ($this->classes !== []) {
+            $options['classes'] = $this->classes;
+        }
+
+        $resolvedSavePath = $this->resolveSavePath();
+
+        if ($this->wantsAnnotation) {
+            $options['save'] = true;
+            $options['save_path'] = $resolvedSavePath;
+        }
+
+        return $this->solutionService->run(
+            solution: $solution,
+            source: $this->mediaPath,
+            model: $resolvedModel,
+            device: $this->device,
             options: $options,
         );
     }

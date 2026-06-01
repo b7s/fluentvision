@@ -88,7 +88,25 @@ $result = FluentVision::make()
 | **Text-prompted** | `yoloe-26*-seg.pt` | `->prompts([...])` required | Targeted attribute/concept detection |
 | **Prompt-free** | `yoloe-26*-seg-pf.pt` | Not supported | Auto-detect without specifying prompts |
 
-Runs on **CPU** (~0.15s/image). See [Providers doc](docs/providers.md#yoloe-26-open-vocabulary-detection) for details.
+### Ultralytics Solutions
+
+Run 12 built-in Ultralytics solutions (counting, heatmaps, speed estimation, etc.) with a single fluent call:
+
+```php
+use B7s\FluentVision\Enums\UltralyticsSolution;
+
+$result = FluentVision::make()
+    ->media('highway.mp4')
+    ->solution(UltralyticsSolution::Count, [
+        'region' => '[[20,400],[1080,400],[1080,800],[20,800]]',
+    ])
+    ->withAnnotation(true)
+    ->process();
+
+echo "In: {$result->inCount}, Out: {$result->outCount}\n";
+```
+
+See [docs/solutions.md](docs/solutions.md) for all 12 solutions and their parameters.
 
 ## Detection Examples
 
@@ -391,7 +409,8 @@ vendor/bin/fluentvision install --config=/path/to/config.php
 - [Usage Guide](docs/usage.md) — complete fluent API reference
 - [Providers](docs/providers.md) — Ultralytics vs NanoDet details
 - [Custom Models](docs/custom-models.md) — using your own trained models
-- [Result Objects](docs/results.md) — InferenceResult, ProcessResult, StreamResult, DetectionResult, BoundingBox API
+- [Result Objects](docs/results.md) — InferenceResult, ProcessResult, StreamResult, SolutionResult, DetectionResult, BoundingBox API
+- [Ultralytics Solutions](docs/solutions.md) — object counting, heatmaps, speed estimation, and 9 more built-in solutions
 - [Real-Time Streaming](docs/realtime-streaming.md) — RTSP, RTMP, webcam frame-by-frame detection
 - [CLI Commands](docs/cli.md) — install, doctor, and options
 
