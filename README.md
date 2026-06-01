@@ -39,22 +39,22 @@ First, install Python dependencies and download models:
 composer require b7s/fluentvision
 
 # Set up Python venv + packages + models
-vendor/bin/fluentvision install
+php ./vendor/bin/fluentvision install
 
 # Or install only one provider
-vendor/bin/fluentvision install --provider=ultralytics
-vendor/bin/fluentvision install --provider=nanodet
+php ./vendor/bin/fluentvision install --provider=ultralytics
+php ./vendor/bin/fluentvision install --provider=nanodet
 
 # Download a specific model
-vendor/bin/fluentvision install --model=yolo26s.pt
-vendor/bin/fluentvision install --model=yoloe-26s-seg.pt
-vendor/bin/fluentvision install --model=nanodet-plus-m-416
+php ./vendor/bin/fluentvision install --model=yolo26s.pt
+php ./vendor/bin/fluentvision install --model=yoloe-26s-seg.pt
+php ./vendor/bin/fluentvision install --model=nanodet-plus-m-416
 ```
 
 Check your environment:
 
 ```bash
-vendor/bin/fluentvision doctor
+php ./vendor/bin/fluentvision doctor
 ```
 
 ## Providers

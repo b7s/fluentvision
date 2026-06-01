@@ -5,7 +5,12 @@ declare(strict_types=1);
 
 use B7s\FluentVision\Console\Application;
 
-require __DIR__ . '/../vendor/autoload.php';
+foreach ([__DIR__ . '/../vendor/autoload.php', __DIR__ . '/../../../autoload.php'] as $autoload) {
+    if (file_exists($autoload)) {
+        require $autoload;
+        break;
+    }
+}
 
 $application = new Application();
 $application->run();
