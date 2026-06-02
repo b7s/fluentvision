@@ -51,7 +51,17 @@ php ./vendor/bin/fluentvision install --model=yoloe-26s-seg.pt
 php ./vendor/bin/fluentvision install --model=nanodet-plus-m-416
 ```
 
-Check your environment:
+The local user running your system must be the same user who will be using FluentVision.
+
+Try something like this:
+
+```sh
+sudo -u www php ./vendor/bin/fluentvision install
+```
+
+This will create the environment in the user's "www" folder: `/home/www/.fluentvision`.
+
+**Check your environment:**
 
 ```bash
 php ./vendor/bin/fluentvision doctor
