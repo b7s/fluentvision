@@ -69,10 +69,10 @@ php ./vendor/bin/fluentvision doctor
 
 ## Providers
 
-| Provider | Backend | Best For                                                                |
-|----------|---------|-------------------------------------------------------------------------|
+| Provider        | Backend                                   | Best For                                             |
+|-----------------|-------------------------------------------|------------------------------------------------------|
 | **Ultralytics** | YOLO26 (n/s/m/l/x), YOLOE-26 (s/m/l + PF) | Full-featured, multi-task, open-vocabulary detection |
-| **NanoDet** | NanoDet-Plus (M/T/G) | Ultra-lightweight, edge devices, real-time                              |
+| **NanoDet**     | NanoDet-Plus (M/T/G)                      | Ultra-lightweight, edge devices, real-time           |
 
 Both providers return identical PHP result types — switch backends without changing your code.
 
@@ -93,10 +93,10 @@ $result = FluentVision::make()
     ->detect();
 ```
 
-| Variant | Suffix | Prompts | Best For |
-|---------|--------|---------|----------|
-| **Text-prompted** | `yoloe-26*-seg.pt` | `->prompts([...])` required | Targeted attribute/concept detection |
-| **Prompt-free** | `yoloe-26*-seg-pf.pt` | Not supported | Auto-detect without specifying prompts |
+| Variant           | Suffix                | Prompts                     | Best For                               |
+|-------------------|-----------------------|-----------------------------|----------------------------------------|
+| **Text-prompted** | `yoloe-26*-seg.pt`    | `->prompts([...])` required | Targeted attribute/concept detection   |
+| **Prompt-free**   | `yoloe-26*-seg-pf.pt` | Not supported               | Auto-detect without specifying prompts |
 
 ### Ultralytics Solutions
 
@@ -228,7 +228,7 @@ FluentVision::make()
     ->classes(['person', 'car']) // filter to specific classes
     ->prompts(['person wearing red', 'hard hat']) // YOLOE text prompts
     ->augment() // test-time augmentation
-    ->half() // FP16 inference (GPU)
+    ->half() // FP16 inference (GPU required)
     ->withDetections() // include detection data (default: true)
     ->withAnnotation() // include annotated image (default: false)
     ->process(); // returns ProcessResult with both
@@ -257,6 +257,8 @@ $result = FluentVision::make()
 echo $result->getFrameCount() . " frames processed\n";
 echo $result->getTotalDetections() . " total detections\n";
 ```
+
+> For realtime stream, check: [Real-Time Streaming](docs/realtime-streaming.md)
 
 ### Image Annotation
 
