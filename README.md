@@ -1,4 +1,7 @@
-# FluentVision
+<div align="center">
+    <img src="docs/images/logo-bw.png" width="200" alt="FluentVision Logo">
+    <h1>FluentVision</h1>
+</div>
 
 A fluent PHP 8.3+ API for YOLO object detection powered by [Ultralytics YOLO26](https://docs.ultralytics.com/) and [NanoDet-Plus](https://github.com/RangiLyu/nanodet).
 
