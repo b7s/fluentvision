@@ -78,13 +78,13 @@ class PythonService
         return $process->isSuccessful();
     }
 
-    public function installPackage(string $package): bool
+    public function installPackage(string $package, int $timeout = 0): bool
     {
         $python = $this->resolvePythonPath();
         $pip = $this->resolvePipPath();
 
-        $process = new Process([$pip, 'install', $package]);
-        $process->setTimeout(300);
+        $process = new Process([...$pip, 'install', $package]);
+        $process->setTimeout($timeout > 0 ? $timeout : null);
         $process->run();
 
         return $process->isSuccessful();
@@ -132,16 +132,19 @@ class PythonService
         return $candidates;
     }
 
-    private function resolvePipPath(): string
+    /**
+     * @return array<int, string>
+     */
+    private function resolvePipPath(): array
     {
         $python = $this->resolvePythonPath();
         $pipPath = str_replace('python', 'pip', $python);
 
         if (file_exists($pipPath) && is_executable($pipPath)) {
-            return $pipPath;
+            return [$pipPath];
         }
 
-        return $python.' -m pip';
+        return [$python, '-m', 'pip'];
     }
 
     private function getHomeDir(): string

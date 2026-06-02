@@ -139,7 +139,7 @@ class InstallCommand extends Command
             venvPath: $config->pythonVenvPath(),
         );
 
-        $this->installPackages($io, $pythonService, ['ultralytics', 'opencv-python-headless', 'pyyaml']);
+        $this->installPackages($io, $pythonService, ['ultralytics', 'opencv-python-headless', 'pyyaml'], 0);
     }
 
     private function installNanodet(SymfonyStyle $io, Config $config): void
@@ -171,18 +171,18 @@ class InstallCommand extends Command
             venvPath: $config->pythonVenvPath(),
         );
 
-        $this->installPackages($io, $pythonService, ['opencv-python-headless', 'pyyaml', 'torch', 'torchvision', 'pytorch_lightning', 'termcolor', 'pycocotools']);
+        $this->installPackages($io, $pythonService, ['opencv-python-headless', 'pyyaml', 'torch', 'torchvision', 'pytorch_lightning', 'termcolor', 'pycocotools'], 0);
     }
 
     /**
      * @param  array<string>  $packages
      */
-    private function installPackages(SymfonyStyle $io, PythonService $pythonService, array $packages): void
+    private function installPackages(SymfonyStyle $io, PythonService $pythonService, array $packages, int $timeout = 0): void
     {
         foreach ($packages as $package) {
             $io->text(sprintf(' Installing %s...', $package));
 
-            if ($pythonService->installPackage($package)) {
+            if ($pythonService->installPackage($package, $timeout)) {
                 $io->text(sprintf(' <info>✓</info> %s installed', $package));
             } else {
                 $io->text(sprintf(' <error>✗</error> Failed to install %s', $package));
