@@ -1,5 +1,7 @@
 # Ultralytics Solutions
 
+![solutions](medias/solutions.webp)
+
 FluentVision provides access to all 12 Ultralytics built-in solutions through a single `solution()` method. Solutions are Ultralytics-only features — they require the Ultralytics provider.
 
 ## Quick Start

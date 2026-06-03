@@ -391,8 +391,7 @@ class FluentVision
         $this->maxFramesToProcess = $maxFramesToProcess;
 
         if ($startAnnotateServerOnPort !== null) {
-            $this->annotatePort = $startAnnotateServerOnPort;
-            $this->wantsAnnotation = true;
+            $this->startAnnotateStreamServer($startAnnotateServerOnPort);
         }
 
         return $this;

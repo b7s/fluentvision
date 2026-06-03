@@ -103,6 +103,8 @@ $result = FluentVision::make()
 
 ### Ultralytics Solutions
 
+![solutions](docs/medias/solutions.webp)
+
 Run 12 built-in Ultralytics solutions (counting, heatmaps, speed estimation, etc.) with a single fluent call:
 
 ```php
